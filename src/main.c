@@ -1,4 +1,6 @@
 #include "lex.h"
+#include "parse.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +33,8 @@ int main(int argc, char **argv) {
     print_token(tokens->data[i]);
   }
   printf("\n");
+
+  function_t **funcs = parse_ast(tokens);
 
   return EXIT_SUCCESS;
 }

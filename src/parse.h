@@ -1,10 +1,12 @@
 #ifndef __PARSE_H
 #define __PARSE_H
 
+#include "lex.h"
+
 #include <stdint.h>
 
 typedef enum _type {
-  INT32,
+  TYPE_INT32,
 } type_t;
 
 typedef struct _arg {
@@ -35,14 +37,14 @@ typedef struct _arith_elm {
 
 struct _arith_expression {
   arith_op_t op;
-  arith_elm_t lhs;
-  arith_elm_t rhs;
+  arith_elm_t *lhs;
+  arith_elm_t *rhs;
 };
 
 typedef struct _expression {
   expression_type_t type;
   union {
-    arith_expression_t arith;
+    arith_expression_t *arith;
   } instance;
 } expression_t;
 
@@ -55,26 +57,28 @@ typedef struct _assign_statement {
 
 typedef struct _call_statement {
   char *name;
-  expression_t *params;
+  expression_t **params;
 } call_statement_t;
 
 typedef struct _statement {
   statement_type_t type;
   union {
-    assign_statement_t assign;
-    call_statement_t call;
+    assign_statement_t *assign;
+    call_statement_t *call;
   } instance;
 } statement_t;
 
 typedef struct _code_block {
-  statement_t *statements;
+  statement_t **statements;
 } code_block_t;
 
 typedef struct _function {
   type_t return_type;
-  arg_t *args;
+  arg_t **args;
   char *name;
-  code_block_t code_block;
+  code_block_t *code_block;
 } function_t;
+
+function_t **parse_ast(token_array_t *);
 
 #endif // __PARSE_H

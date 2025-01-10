@@ -1,3 +1,9 @@
+int test() {
+    b = b + b;
+}
+
 int main() {
     a=b+c;
+    a = a + 1;
+    test();
 }
