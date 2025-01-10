@@ -9,7 +9,7 @@ BIN = $(OUTD)/dumc
 SRC = $(wildcard $(SRCD)/*.c)
 OBJ = $(patsubst $(SRCD)/%.c,$(OBJD)/%.o,$(SRC))
 
-CFLAGS = -Wall -Wextra -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wswitch-default -Wconversion
+CFLAGS = -Wall -Wextra -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wconversion
 LDFLAGS =
 
 debug: CFLAGS += -g3
