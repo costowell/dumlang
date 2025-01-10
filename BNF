@@ -1,12 +1,14 @@
 <toplevel>    ::= <function>*
-<function>    ::= <type> ' ' <identifier> '(' ')' <block>
+<function>    ::= <type> ' ' <identifier> '(' (<arg> (',' <arg>)*)? ')' <block>
+<arg>         ::= <type> ' ' <identifier>
 <block>       ::= '{' (<stmt> ';')* '}'
 <stmt>        ::= <assign-stmt> | <call-stmt>
+<call-stmt>   ::= <identifier> '(' (<expr> (',' <expr>)*)? ')'
 <assign-stmt> ::= <identifier> '=' <expr>
 <expr>        ::= <arith-expr>
 <arith-expr>  ::= <arith-elm> (<arith-op> <arith-elm>)*
+<arith-elm>   ::= <num> | <identifier> | '(' <expr> ')'
 <arith-op>    ::= '+' | '-' | '*' | '/'
-<arith-elm>   ::= <num> | <identifier>
 <num>         ::= 32-bit int
 <identifier>  ::= a-z | A-Z
 <type>        ::= 'int'
