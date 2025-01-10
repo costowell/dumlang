@@ -46,4 +46,4 @@ typedef struct _token_array {
 token_array_t *parse_tokens(char *str, size_t size);
 void print_token(token_t *);
 
-#endif
+#endif // __LEX_H
