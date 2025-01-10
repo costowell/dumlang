@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+extern char *token_type_names[];
+
 typedef enum _token_type {
   TOKEN_NONE,
   TOKEN_ENDLINE,
@@ -11,6 +13,7 @@ typedef enum _token_type {
   TOKEN_PAREN_RIGHT,
   TOKEN_BRACE_LEFT,
   TOKEN_BRACE_RIGHT,
+  TOKEN_COMMA,
   TOKEN_TYPE_INT,
   TOKEN_OP_ADD,
   TOKEN_OP_SUB,
@@ -44,6 +47,7 @@ typedef struct _token_array {
 } token_array_t;
 
 token_array_t *parse_tokens(char *str, size_t size);
-void print_token(token_t *);
+void print_token(const token_t *);
+token_t *array_get(token_array_t *arr, size_t index);
 
 #endif // __LEX_H
