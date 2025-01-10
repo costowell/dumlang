@@ -1,0 +1,15 @@
+<toplevel>    ::= <function>*
+<function>    ::= <type> ' ' <identifier> '(' ')' <block>
+<block>       ::= '{' (<stmt> ';')* '}'
+<stmt>        ::= <assign-stmt> | <call-stmt>
+<assign-stmt> ::= <identifier> '=' <expr>
+<expr>        ::= <arith-expr>
+<arith-expr>  ::= <arith-elm> (<arith-op> <arith-elm>)*
+<arith-op>    ::= '+' | '-' | '*' | '/'
+<arith-elm>   ::= <num> | <identifier>
+<num>         ::= 32-bit int
+<identifier>  ::= a-z | A-Z
+<type>        ::= 'int'
+
+
+One data type and one type of expression isn't too complicated, but will keep figuring out codegen more straight forward.
