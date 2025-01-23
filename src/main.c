@@ -1,5 +1,6 @@
 #include "lex.h"
 #include "parse.h"
+#include "codegen.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,7 @@ int main(int argc, char **argv) {
   printf("\n");
 
   function_t **funcs = parse_ast(tokens);
+  gen_object(funcs, "test.o");
 
   return EXIT_SUCCESS;
 }

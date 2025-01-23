@@ -9,8 +9,10 @@ BIN = $(OUTD)/dumc
 SRC = $(wildcard $(SRCD)/*.c)
 OBJ = $(patsubst $(SRCD)/%.c,$(OBJD)/%.o,$(SRC))
 
-CFLAGS = -Wall -Wextra -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wconversion
-LDFLAGS =
+LIBS = libelf
+
+CFLAGS = $(shell pkg-config --cflags $(LIBS)) -Wall -Wextra -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wconversion
+LDFLAGS = $(shell pkg-config --libs $(LIBS))
 
 debug: CFLAGS += -g3
 debug: all

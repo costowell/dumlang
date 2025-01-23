@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 typedef enum _type {
-  TYPE_INT32,
+  TYPE_INT64,
 } type_t;
 
 typedef struct _arg {
@@ -30,7 +30,7 @@ typedef struct _arith_elm {
   arith_elm_type_t type;
   union {
     arith_expression_t *expr;
-    int32_t int32;
+    int64_t int64;
     char *name;
   } instance;
 } arith_elm_t;
@@ -48,7 +48,13 @@ typedef struct _expression {
   } instance;
 } expression_t;
 
-typedef enum _statement_type { STMT_ASSIGN, STMT_CALL } statement_type_t;
+typedef enum _statement_type { STMT_DECLARE, STMT_ASSIGN, STMT_CALL } statement_type_t;
+
+typedef struct _declare_statement {
+  type_t type;
+  char *name;
+  expression_t *expr; // CAN BE NULL
+} declare_statement_t;
 
 typedef struct _assign_statement {
   char *lhs;
@@ -65,6 +71,7 @@ typedef struct _statement {
   union {
     assign_statement_t *assign;
     call_statement_t *call;
+    declare_statement_t *declare;
   } instance;
 } statement_t;
 

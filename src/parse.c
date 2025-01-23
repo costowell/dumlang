@@ -63,7 +63,7 @@ type_t parse_type() {
     fatal_token("invalid type", index - 1);
     exit(EXIT_FAILURE);
   } else {
-    return TYPE_INT32;
+    return TYPE_INT64;
   }
 }
 
@@ -95,7 +95,7 @@ arith_elm_t *parse_arith_elm() {
   arith_elm_t *elm = malloc(sizeof(arith_elm_t));
   if (token->type == TOKEN_INT) {
     elm->type = ARITH_NUM;
-    elm->instance.int32 = token->value.int32;
+    elm->instance.int64 = token->value.int64;
   } else if (token->type == TOKEN_IDENTIFIER) {
     elm->type = ARITH_IDENT;
     elm->instance.name = token->value.str;
@@ -151,27 +151,51 @@ assign_statement_t *parse_assign_statement() {
   return stmt;
 }
 
-statement_t *parse_statement() {
-  // Peek the next token since it distinguishes
-  // a function call and a var assignment
-  //
-  // (Snippet from BNF):
-  // <call-stmt>   ::= <identifier> '(' (<expr> (',' <expr>)*)? ')'
-  // <assign-stmt> ::= <identifier> '=' <expr>
-  token_t *tok = array_get(arr, index + 1);
-  statement_t *stmt = malloc(sizeof(statement_t));
+declare_statement_t *parse_declare_statement() {
+  type_t type = parse_type();
+  token_t *name = next_type(TOKEN_IDENTIFIER);
 
-  if (tok->type == TOKEN_PAREN_LEFT) {
-    stmt->type = STMT_CALL;
-    stmt->instance.call = parse_call_statement();
-  } else if (tok->type == TOKEN_OP_EQU) {
-    stmt->type = STMT_ASSIGN;
-    stmt->instance.assign = parse_assign_statement();
+  declare_statement_t *stmt = malloc(sizeof(declare_statement_t));
+  stmt->name = name->value.str;
+  stmt->type = type;
+
+  if (peek_next_type(TOKEN_OP_EQU) != NULL) {
+    next();
+    stmt->expr = parse_expression();
   } else {
-    free(stmt);
-    fatal_token("exepected function call or variable assignment, got neither",
-                index);
-    exit(EXIT_FAILURE);
+    stmt->expr = NULL;
+  }
+
+  return stmt;
+}
+
+statement_t *parse_statement() {
+
+  statement_t *stmt = malloc(sizeof(statement_t));
+  if (peek_next_type(TOKEN_TYPE_INT) != NULL) {
+    stmt->type = STMT_DECLARE;
+    stmt->instance.declare = parse_declare_statement();
+  } else {
+    // Peek the next token since it distinguishes
+    // a function call and a var assignment
+    //
+    // (Snippet from BNF):
+    // <call-stmt>   ::= <identifier> '(' (<expr> (',' <expr>)*)? ')'
+    // <assign-stmt> ::= <identifier> '=' <expr>
+    token_t *tok = array_get(arr, index + 1);
+
+    if (tok->type == TOKEN_PAREN_LEFT) {
+      stmt->type = STMT_CALL;
+      stmt->instance.call = parse_call_statement();
+    } else if (tok->type == TOKEN_OP_EQU) {
+      stmt->type = STMT_ASSIGN;
+      stmt->instance.assign = parse_assign_statement();
+    } else {
+      free(stmt);
+      fatal_token("exepected function call or variable assignment, got neither",
+                  index);
+      exit(EXIT_FAILURE);
+    }
   }
 
   return stmt;

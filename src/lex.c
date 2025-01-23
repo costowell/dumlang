@@ -64,7 +64,7 @@ void print_token(const token_t *token) {
   printf("('%s'", token_type_names[token->type]);
   switch (token->type) {
   case TOKEN_INT:
-    printf(": %d", token->value.int32);
+    printf(": %ld", token->value.int64);
     break;
   case TOKEN_IDENTIFIER:
     printf(": \"%s\"", token->value.str);
@@ -107,7 +107,7 @@ token_array_t *parse_tokens(char *str, size_t size) {
         i++;
       }
       i--;
-      value.int32 = num * neg;
+      value.int64 = num * neg;
     } else {
       switch (str[i]) {
       case ';':

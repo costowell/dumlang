@@ -2,8 +2,9 @@
 <function>    ::= <type> ' ' <identifier> '(' (<arg> (',' <arg>)*)? ')' <block>
 <arg>         ::= <type> ' ' <identifier>
 <block>       ::= '{' (<stmt> ';')* '}'
-<stmt>        ::= <assign-stmt> | <call-stmt>
+<stmt>        ::= <declr-stmt> | <assign-stmt> | <call-stmt>
 <call-stmt>   ::= <identifier> '(' (<expr> (',' <expr>)*)? ')'
+<declr-stmt>  ::= <type> ' ' <identifier> ('=' <expr>)?
 <assign-stmt> ::= <identifier> '=' <expr>
 <expr>        ::= <arith-expr>
 <arith-expr>  ::= <arith-elm> (<arith-op> <arith-elm>)*

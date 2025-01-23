@@ -30,7 +30,7 @@ typedef enum _token_type {
 } token_type_t;
 
 typedef union _token_value {
-  int32_t int32;
+  int64_t int64;
   char *str;
   void *none;
 } token_value_t;
