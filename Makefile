@@ -22,6 +22,9 @@ release: all
 
 all: $(OUTD) $(OBJD) $(BIN)
 
+examples: all
+	$(MAKE) -C examples/
+
 $(BIN): $(OBJ)
 	$(CC) -o $@ $(LDFLAGS) $^
 
@@ -32,4 +35,4 @@ $(OBJD) $(OUTD):
 	mkdir -p $@
 
 clean:
-	-rm -r $(OBJD) $(OUTD)
+	-rm -rf $(OBJD) $(OUTD)

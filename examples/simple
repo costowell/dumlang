@@ -1,9 +1,0 @@
-int test() {
-    b = b + b;
-}
-
-int main() {
-    int a=b+c;
-    a = a + 1;
-    test();
-}

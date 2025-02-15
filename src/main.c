@@ -1,6 +1,7 @@
 #include "lex.h"
 #include "parse.h"
 #include "codegen.h"
+#include "instr.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@ int main(int argc, char **argv) {
   // Read 1K
   char *program_contents = malloc(sizeof(char) * 1024);
   fread(program_contents, sizeof(char), 1024, fd);
+  fclose(fd);
 
   // Lex file
   token_array_t *tokens =
@@ -35,8 +37,21 @@ int main(int argc, char **argv) {
   }
   printf("\n");
 
+  char *tmp, *name = strtok(argv[1], "/");
+  while (name != NULL) {
+    if ((tmp = strtok(NULL, "/")) == NULL) {
+      name = strtok(name, ".");
+      break;
+    }
+    name = tmp;
+  }
+
+  char *object_name = calloc(strlen(name) + 3, sizeof(char));
+  strcpy(object_name, name);
+  strcat(object_name, ".o");
+
   function_t **funcs = parse_ast(tokens);
-  gen_object(funcs, "test.o");
+  gen_object(funcs, object_name);
 
   return EXIT_SUCCESS;
 }

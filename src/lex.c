@@ -5,26 +5,27 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern char *token_type_names[] = {[TOKEN_NONE] = "no token",
-                                   [TOKEN_PAREN_LEFT] = "(",
-                                   [TOKEN_PAREN_RIGHT] = ")",
-                                   [TOKEN_BRACE_LEFT] = "{",
-                                   [TOKEN_BRACE_RIGHT] = "}",
-                                   [TOKEN_COMMA] = ",",
-                                   [TOKEN_ENDLINE] = "END",
-                                   [TOKEN_TYPE_INT] = "int_type",
-                                   [TOKEN_OP_ADD] = "+",
-                                   [TOKEN_OP_SUB] = "-",
-                                   [TOKEN_OP_MUL] = "*",
-                                   [TOKEN_OP_DIV] = "/",
-                                   [TOKEN_OP_EQU] = "=",
-                                   [TOKEN_CMP_EQU] = "==",
-                                   [TOKEN_CMP_GTE] = ">=",
-                                   [TOKEN_CMP_LTE] = "<=",
-                                   [TOKEN_CMP_GT] = ">",
-                                   [TOKEN_CMP_LT] = "<",
-                                   [TOKEN_IDENTIFIER] = "identifier",
-                                   [TOKEN_INT] = "int"};
+char *token_type_names[] = {[TOKEN_NONE] = "no token",
+                            [TOKEN_PAREN_LEFT] = "(",
+                            [TOKEN_PAREN_RIGHT] = ")",
+                            [TOKEN_BRACE_LEFT] = "{",
+                            [TOKEN_BRACE_RIGHT] = "}",
+                            [TOKEN_COMMA] = ",",
+                            [TOKEN_ENDLINE] = "END",
+                            [TOKEN_TYPE_INT] = "int_type",
+                            [TOKEN_OP_ADD] = "+",
+                            [TOKEN_OP_SUB] = "-",
+                            [TOKEN_OP_MUL] = "*",
+                            [TOKEN_OP_DIV] = "/",
+                            [TOKEN_OP_EQU] = "=",
+                            [TOKEN_CMP_EQU] = "==",
+                            [TOKEN_CMP_GTE] = ">=",
+                            [TOKEN_CMP_LTE] = "<=",
+                            [TOKEN_CMP_GT] = ">",
+                            [TOKEN_CMP_LT] = "<",
+                            [TOKEN_IDENTIFIER] = "identifier",
+                            [TOKEN_INT] = "int",
+                            [TOKEN_RETURN] = "return"};
 
 token_array_t *array_init() {
   token_array_t *arr = malloc(sizeof(token_array_t));
@@ -86,9 +87,12 @@ token_array_t *parse_tokens(char *str, size_t size) {
     token_type_t type = TOKEN_NONE;
     token_value_t value = {.none = NULL};
 
-    if (rem >= 3 && strncmp(str + i, "int ", 3) == 0) {
+    if (rem >= 4 && strncmp(str + i, "int ", 4) == 0) {
       type = TOKEN_TYPE_INT;
       i += 3;
+    } else if (rem >= 7 && strncmp(str + i, "return ", 7) == 0) {
+      type = TOKEN_RETURN;
+      i += 6;
     } else if (is_valid_identifier(str[i])) {
       type = TOKEN_IDENTIFIER;
       size_t id_size = 0;

@@ -56,7 +56,7 @@ token_t *next_type(token_type_t expected) {
 
 /// Parsing
 
-arith_expression_t *parse_arith_expression();
+arith_operation_t *parse_arith_operation();
 
 type_t parse_type() {
   if (next_type(TOKEN_TYPE_INT) == NULL) {
@@ -67,9 +67,9 @@ type_t parse_type() {
   }
 }
 
-arith_op_t parse_arith_op() {
+arith_operator_t parse_arith_op() {
   token_t *token = next();
-  arith_op_t op;
+  arith_operator_t op;
   switch (token->type) {
   case TOKEN_OP_ADD:
     op = OP_ADD;
@@ -90,9 +90,9 @@ arith_op_t parse_arith_op() {
   return op;
 }
 
-arith_elm_t *parse_arith_elm() {
+arith_expression_t *parse_arith_expression() {
   token_t *token = next();
-  arith_elm_t *elm = malloc(sizeof(arith_elm_t));
+  arith_expression_t *elm = malloc(sizeof(arith_expression_t));
   if (token->type == TOKEN_INT) {
     elm->type = ARITH_NUM;
     elm->instance.int64 = token->value.int64;
@@ -100,8 +100,8 @@ arith_elm_t *parse_arith_elm() {
     elm->type = ARITH_IDENT;
     elm->instance.name = token->value.str;
   } else if (token->type == TOKEN_PAREN_LEFT) {
-    elm->type = ARITH_EXPR;
-    elm->instance.expr = parse_arith_expression();
+    elm->type = ARITH_OP;
+    elm->instance.op = parse_arith_operation();
   } else {
     free(elm);
     fatal_token("expected arithmetic element", index - 1);
@@ -110,12 +110,12 @@ arith_elm_t *parse_arith_elm() {
   return elm;
 }
 
-arith_expression_t *parse_arith_expression() {
+arith_operation_t *parse_arith_operation() {
   // TODO: parse more than binary expr
-  arith_elm_t *lhs = parse_arith_elm();
-  arith_op_t op = parse_arith_op();
-  arith_elm_t *rhs = parse_arith_elm();
-  arith_expression_t *expr = malloc(sizeof(arith_expression_t));
+  arith_expression_t *lhs = parse_arith_expression();
+  arith_operator_t op = parse_arith_op();
+  arith_expression_t *rhs = parse_arith_expression();
+  arith_operation_t *expr = malloc(sizeof(arith_operation_t));
   expr->op = op;
   expr->lhs = lhs;
   expr->rhs = rhs;
@@ -169,12 +169,24 @@ declare_statement_t *parse_declare_statement() {
   return stmt;
 }
 
+ret_statement_t *parse_ret_statement() {
+  ASSERT_NEXT(TOKEN_RETURN);
+  expression_t *expr = parse_expression();
+
+  ret_statement_t *stmt = malloc(sizeof(ret_statement_t));
+  stmt->expr = expr;
+  return stmt;
+}
+
 statement_t *parse_statement() {
 
   statement_t *stmt = malloc(sizeof(statement_t));
   if (peek_next_type(TOKEN_TYPE_INT) != NULL) {
     stmt->type = STMT_DECLARE;
     stmt->instance.declare = parse_declare_statement();
+  } else if (peek_next_type(TOKEN_RETURN) != NULL) {
+    stmt->type = STMT_RET;
+    stmt->instance.ret = parse_ret_statement();
   } else {
     // Peek the next token since it distinguishes
     // a function call and a var assignment

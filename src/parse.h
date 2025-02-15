@@ -16,29 +16,29 @@ typedef struct _arg {
 
 typedef enum _expression_type { EXPR_ARITH } expression_type_t;
 
-typedef enum _arith_op { OP_ADD, OP_SUB, OP_MUL, OP_DIV } arith_op_t;
+typedef enum _arith_operator { OP_ADD, OP_SUB, OP_MUL, OP_DIV } arith_operator_t;
 
 typedef enum _arith_elm_type {
   ARITH_NUM,
   ARITH_IDENT,
-  ARITH_EXPR
+  ARITH_OP
 } arith_elm_type_t;
 
-typedef struct _arith_expression arith_expression_t;
+typedef struct _arith_operation arith_operation_t;
 
-typedef struct _arith_elm {
+typedef struct _arith_expression {
   arith_elm_type_t type;
   union {
-    arith_expression_t *expr;
+    arith_operation_t *op;
     int64_t int64;
     char *name;
   } instance;
-} arith_elm_t;
+} arith_expression_t;
 
-struct _arith_expression {
-  arith_op_t op;
-  arith_elm_t *lhs;
-  arith_elm_t *rhs;
+struct _arith_operation {
+  arith_operator_t op;
+  arith_expression_t *lhs;
+  arith_expression_t *rhs;
 };
 
 typedef struct _expression {
@@ -48,7 +48,7 @@ typedef struct _expression {
   } instance;
 } expression_t;
 
-typedef enum _statement_type { STMT_DECLARE, STMT_ASSIGN, STMT_CALL } statement_type_t;
+typedef enum _statement_type { STMT_DECLARE, STMT_ASSIGN, STMT_CALL, STMT_RET } statement_type_t;
 
 typedef struct _declare_statement {
   type_t type;
@@ -66,12 +66,17 @@ typedef struct _call_statement {
   expression_t **params;
 } call_statement_t;
 
+typedef struct _ret_statement {
+  expression_t *expr;
+} ret_statement_t;
+
 typedef struct _statement {
   statement_type_t type;
   union {
     assign_statement_t *assign;
     call_statement_t *call;
     declare_statement_t *declare;
+    ret_statement_t *ret;
   } instance;
 } statement_t;
 

@@ -27,6 +27,7 @@ typedef enum _token_type {
   TOKEN_CMP_LTE,
   TOKEN_IDENTIFIER,
   TOKEN_INT,
+  TOKEN_RETURN,
 } token_type_t;
 
 typedef union _token_value {

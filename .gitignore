@@ -1,4 +1,6 @@
 obj/
 out/
+examples/*.o
+examples/example
 .ccls-cache/
 compile_commands.json
