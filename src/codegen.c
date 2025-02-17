@@ -2,6 +2,7 @@
 #include "hashmap.h"
 #include "instr.h"
 #include "obj.h"
+#include "scope.h"
 
 #include <err.h>
 #include <libelf.h>
@@ -20,31 +21,6 @@ char strtab[256];
 unsigned int strtab_len;
 
 /* Utils */
-
-scope_t *init_scope() {
-  scope_t *scope = calloc(1, sizeof(scope_t));
-  if (hashmap_create(8, &scope->nametomem) != 0)
-    return NULL;
-  return scope;
-}
-
-void push_scope(scope_t *super_scope, scope_t *scope) {
-  if (super_scope == NULL)
-    return;
-  while (super_scope->next != NULL) {
-    super_scope = super_scope->next;
-  }
-  super_scope->next = scope;
-}
-
-void pop_scope(scope_t *super_scope) {
-  if (super_scope == NULL || super_scope->next == NULL)
-    return;
-  while (super_scope->next->next != NULL) {
-    super_scope = super_scope->next;
-  }
-  super_scope->next = NULL;
-}
 
 void append_strtab(char *str) {
   strcpy(strtab + strtab_len, str);
@@ -95,7 +71,6 @@ void emit() {
     instr_set_rex(flags);                                                      \
   } while (0)
 
-
 uint8_t reg_num(reg_t r) { return r & 0x07; }
 
 void pop(reg_t reg) {
@@ -126,6 +101,26 @@ void mov_imm64(reg_t reg, int64_t imm) {
   emit();
 }
 
+void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
+  REXBR(src_base, dst, REX_W);
+  instr_set_opcode(MOV_RM_R);
+  instr_set_mod(0b10); // Four byte signed displacement
+  instr_set_rm(src_base);
+  instr_set_reg(dst);
+  instr_set_disp32(displacement);
+  emit();
+}
+
+void mov_reg_to_mem_offset(reg_t src, reg_t dst_base, int32_t displacement) {
+  REXBR(dst_base, src, REX_W);
+  instr_set_opcode(MOV_R_RM);
+  instr_set_mod(0b10); // Four byte signed displacement
+  instr_set_rm(dst_base);
+  instr_set_reg(src);
+  instr_set_disp32(displacement);
+  emit();
+}
+
 void sub_imm32(reg_t reg, int32_t imm) {
   REXB(reg, REX_W);
   instr_set_opcode(SUB_RM_IMM);
@@ -143,37 +138,62 @@ void ret() {
 
 /* Write Machine Instructions */
 
-void write_declare_statement(declare_statement_t *stmt, scope_t *scope) {
-  // We can discard type for now since we know it has to be an INT
-}
-
-void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
-  switch (stmt->expr->instance.arith->type) {
+void evaluate_arith_expression(arith_expression_t *expr, reg_t result, scope_t *scope) {
+  switch (expr->type) {
     case ARITH_NUM:
-      mov_imm64(RAX, stmt->expr->instance.arith->instance.int64);
-      ret();
+      mov_imm64(result, expr->instance.int64);
+      break;
+    case ARITH_IDENT:
+      ;
+      const scope_var_t *scope_var = scope_get(scope, expr->instance.name);
+      if (scope_var == NULL)
+        errx(EXIT_FAILURE, "error: '%s' not found in scope", expr->instance.name);
+      mov_mem_offset_to_reg(RAX, RBP, -scope_var->position);
       break;
   }
 }
 
-void write_statement(statement_t *stmt, scope_t *scope) {
+void evaluate_expression(expression_t *expr, reg_t result, scope_t *scope) {
+  // We can assume all expressions are arith expressions
+  evaluate_arith_expression(expr->instance.arith, result, scope);
+}
+
+void write_declare_statement(declare_statement_t *stmt, scope_t *scope, char **added_vars, uint8_t *added_vars_size) {
+  // We can discard type for now since we know it has to be an INT
+  if (scope_get(scope, stmt->name) != NULL)
+    errx(EXIT_FAILURE, "error: '%s' already declared", stmt->name);
+
+  const scope_var_t *scope_var = scope_insert(scope, stmt->name, 8); // Size is by default 4 since INT is the only type
+  added_vars[(*added_vars_size)++] = stmt->name;
+
+  evaluate_expression(stmt->expr, RAX, scope);
+  mov_reg_to_mem_offset(RAX, RBP, -scope_var->position);
+}
+
+void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
+  evaluate_expression(stmt->expr, RAX, scope);
+  mov_regs(RSP, RBP);
+  pop(RBP);
+  ret();
+}
+
+void write_statement(statement_t *stmt, scope_t *scope, char **added_vars, uint8_t *added_vars_size) {
   switch (stmt->type) {
   case STMT_DECLARE:
-    write_declare_statement(stmt->instance.declare, scope);
+    write_declare_statement(stmt->instance.declare, scope, added_vars, added_vars_size);
     break;
   case STMT_RET:
     write_ret_statement(stmt->instance.ret, scope);
     break;
   }
-
 }
 
-void write_codeblock(code_block_t *block, scope_t *super_scope) {
-  scope_t *scope = init_scope();
-  push_scope(super_scope, scope);
+void write_codeblock(code_block_t *block, scope_t *scope) {
+  char *added_vars[8] = { 0 };
+  uint8_t added_vars_size = 0;
   for (statement_t **stmts = block->statements; *stmts != NULL; ++stmts) {
     statement_t *stmt = *stmts;
-    write_statement(stmt, super_scope);
+    write_statement(stmt, scope, added_vars, &added_vars_size);
   }
 }
 
@@ -203,22 +223,18 @@ void write_func(function_t *func) {
   uint32_t stack_size = calc_stack_size(func->code_block);
 
   // Setup stack
-  if (stack_size > 0) {
-    push(RBP);
-    mov_regs(RBP, RSP);
-    sub_imm32(RSP, stack_size);
-  }
+  push(RBP);
+  mov_regs(RBP, RSP);
+  sub_imm32(RSP, stack_size);
 
   // Init scope
-  scope_t *scope = init_scope();
+  scope_t *scope = scope_init();
 
   // Write code block
   write_codeblock(func->code_block, scope);
 
   // Tear down stack
   if (stack_size > 0) {
-    mov_regs(RSP, RBP);
-    pop(RBP);
   }
 
   // Add to strtab

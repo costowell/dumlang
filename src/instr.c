@@ -19,6 +19,9 @@ uint8_t rm = 0;
 uint8_t imm[8];
 uint8_t imm_size = 0;
 
+uint8_t disp[8];
+uint8_t disp_size = 0;
+
 uint8_t instruction[MAX_INSTR_SIZE + 1] = {0};
 uint8_t instruction_size = 0;
 
@@ -70,6 +73,8 @@ uint8_t instr_flush(uint8_t **buf) {
 
   if (imm_size != 0)
     append_buf(imm, imm_size);
+  if (disp_size != 0)
+    append_buf(disp, disp_size);
 
   modregrm = false;
   mod = 0;
@@ -79,6 +84,7 @@ uint8_t instr_flush(uint8_t **buf) {
   opc_type = SINGLE_BYTE;
   opc_byte = 0x00;
   imm_size = 0;
+  disp_size = 0;
   *buf = instruction;
   return instruction_size;
 }
@@ -108,6 +114,34 @@ void instr_set_reg(reg_t r) {
 void instr_set_rm(uint8_t r) {
   modregrm = true;
   rm = r & 0x07;
+}
+void instr_set_disp8(int8_t i) {
+  imm[0] = i;
+  imm_size = 1;
+}
+void instr_set_disp16(int16_t i) {
+  imm[0] = i & 0xFF;
+  imm[1] = (i >> 8) & 0xFF;
+  imm_size = 2;
+}
+void instr_set_disp32(int32_t i) {
+  imm[0] = i & 0xFF;
+  imm[1] = (i >> 8) & 0xFF;
+  imm[2] = (i >> 16) & 0xFF;
+  imm[3] = (i >> 24) & 0xFF;
+  imm_size = 4;
+}
+
+void instr_set_disp64(int64_t i) {
+  imm[0] = i & 0xFF;
+  imm[1] = (i >> 8) & 0xFF;
+  imm[2] = (i >> 16) & 0xFF;
+  imm[3] = (i >> 24) & 0xFF;
+  imm[4] = (i >> 32) & 0xFF;
+  imm[5] = (i >> 40) & 0xFF;
+  imm[6] = (i >> 48) & 0xFF;
+  imm[7] = (i >> 56) & 0xFF;
+  imm_size = 8;
 }
 void instr_set_imm8(int8_t i) {
   imm[0] = i;

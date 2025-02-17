@@ -84,5 +84,9 @@ void instr_set_imm8(int8_t i);
 void instr_set_imm16(int16_t i);
 void instr_set_imm32(int32_t i);
 void instr_set_imm64(int64_t i);
+void instr_set_disp8(int8_t i);
+void instr_set_disp16(int16_t i);
+void instr_set_disp32(int32_t i);
+void instr_set_disp64(int64_t i);
 
 #endif
