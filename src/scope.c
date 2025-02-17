@@ -23,6 +23,10 @@ const scope_var_t *scope_insert(scope_t *scope, char *str, uint8_t size) {
   return scope_var;
 }
 
+bool scope_remove(scope_t *scope, char *str) {
+    return hashmap_remove(&scope->map, str, strlen(str)) == 0;
+}
+
 const scope_var_t *scope_get(scope_t *scope, char *str) {
   const scope_var_t *elm = hashmap_get(&scope->map, str, strlen(str));
   return elm;

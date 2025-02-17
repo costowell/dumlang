@@ -195,6 +195,9 @@ void write_codeblock(code_block_t *block, scope_t *scope) {
     statement_t *stmt = *stmts;
     write_statement(stmt, scope, added_vars, &added_vars_size);
   }
+  for (uint8_t i = 0; i < added_vars_size; ++i) {
+    scope_remove(scope, added_vars[i]);
+  }
 }
 
 uint32_t calc_stack_size(code_block_t *code_block) {
