@@ -1,14 +1,14 @@
 DUMC := ../out/dumc
 CC   := gcc
 
-example: main.o simple.o
-	$(CC) -o $@ $^
+example: main.o simple
+	$(CC) -o $@ main.o simple.o
 
 main.o: main.c
 	$(CC) -c -o $@ $^
 
-simple.o: simple.dum
-	$(DUMC) $^
+simple:
+	$(DUMC) simple.dum
 
 clean:
 	-rm -f main.o simple.o example

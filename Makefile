@@ -35,4 +35,5 @@ $(OBJD) $(OUTD):
 	mkdir -p $@
 
 clean:
+	$(MAKE) -C examples/ clean
 	-rm -rf $(OBJD) $(OUTD)
