@@ -1,7 +1,8 @@
 #include <stdio.h>
+#include <stdint.h>
 
-extern int dumlang();
+extern int64_t dumlang();
 
 int main() {
-    printf("%d\n", dumlang());
+    printf("%ld\n", dumlang());
 }
