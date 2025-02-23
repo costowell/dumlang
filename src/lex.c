@@ -104,7 +104,11 @@ token_array_t *parse_tokens(char *str, size_t size) {
     } else if (is_valid_number(str[i]) || str[i] == '-') {
       type = TOKEN_INT;
       int num = 0;
-      int neg = str[i] == '-' ? -1 : 1;
+      int neg = 1;
+      if (str[i] == '-') {
+        neg = -1;
+        i++;
+      }
       while (is_valid_number(str[i])) {
         num *= 10;
         num += str[i] - '0';
