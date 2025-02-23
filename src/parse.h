@@ -16,7 +16,16 @@ typedef struct _arg {
 
 typedef enum _expression_type { EXPR_ARITH } expression_type_t;
 
-typedef enum _arith_operator { OP_ADD, OP_SUB, OP_MUL, OP_DIV } arith_operator_t;
+// P
+// E
+// M D
+// A S
+typedef enum _arith_operator {
+  OP_ADD,
+  OP_SUB,
+  OP_MUL,
+  OP_DIV
+} arith_operator_t;
 
 typedef enum _arith_elm_type {
   ARITH_NUM,
@@ -48,7 +57,12 @@ typedef struct _expression {
   } instance;
 } expression_t;
 
-typedef enum _statement_type { STMT_DECLARE, STMT_ASSIGN, STMT_CALL, STMT_RET } statement_type_t;
+typedef enum _statement_type {
+  STMT_DECLARE,
+  STMT_ASSIGN,
+  STMT_CALL,
+  STMT_RET
+} statement_type_t;
 
 typedef struct _declare_statement {
   type_t type;

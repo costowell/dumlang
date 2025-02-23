@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 static size_t index;
 static token_array_t *arr;
@@ -30,8 +31,12 @@ void fatal_token_type(token_type_t expected, size_t culprit) {
   printf("\n");
 }
 
+token_t *peek() {
+  return array_get(arr, index);
+}
+
 token_t *peek_next_type(token_type_t expected) {
-  token_t *token = array_get(arr, index);
+  token_t *token = peek();
   if (token == NULL || token->type != expected)
     return NULL;
   return token;
@@ -45,6 +50,14 @@ token_t *next_type(token_type_t expected) {
     index++;
   return token;
 }
+
+#define ASSERT_PEEK_NEXT(Y)                                                         \
+  {                                                                            \
+    if (peek_next_type((Y)) == NULL) {                                              \
+      fatal_token_type((Y), (index));                                      \
+      exit(EXIT_FAILURE);                                                      \
+    }                                                                          \
+  }
 
 #define ASSERT_NEXT(Y)                                                         \
   {                                                                            \
@@ -67,59 +80,86 @@ type_t parse_type() {
   }
 }
 
-arith_operator_t parse_arith_op() {
-  token_t *token = next();
-  arith_operator_t op;
+arith_operator_t parse_arith_op(token_t *token) {
   switch (token->type) {
   case TOKEN_OP_ADD:
-    op = OP_ADD;
-    break;
+    return OP_ADD;
   case TOKEN_OP_SUB:
-    op = OP_SUB;
-    break;
+    return OP_SUB;
   case TOKEN_OP_MUL:
-    op = OP_MUL;
-    break;
+    return OP_MUL;
   case TOKEN_OP_DIV:
-    op = OP_DIV;
-    break;
+    return OP_DIV;
   default:
     fatal_token("expected arithmetic operator", index - 1);
     exit(EXIT_FAILURE);
   }
-  return op;
 }
 
 arith_expression_t *parse_arith_expression() {
-  token_t *token = next();
-  arith_expression_t *elm = malloc(sizeof(arith_expression_t));
-  if (token->type == TOKEN_INT) {
-    elm->type = ARITH_NUM;
-    elm->instance.int64 = token->value.int64;
-  } else if (token->type == TOKEN_IDENTIFIER) {
-    elm->type = ARITH_IDENT;
-    elm->instance.name = token->value.str;
-  } else if (token->type == TOKEN_PAREN_LEFT) {
-    elm->type = ARITH_OP;
-    elm->instance.op = parse_arith_operation();
-  } else {
-    free(elm);
-    fatal_token("expected arithmetic element", index - 1);
+  token_t *token;
+  arith_expression_t *root = NULL;
+  while ((token = peek()) != NULL) {
+    arith_expression_t *expr = malloc(sizeof(arith_expression_t));
+    bool is_op = false;
+    bool unrecognized = false;
+    switch (token->type) {
+      case TOKEN_INT:
+        expr->type = ARITH_NUM;
+        expr->instance.int64 = token->value.int64;
+        break;
+      case TOKEN_IDENTIFIER:
+        expr->type = ARITH_IDENT;
+        expr->instance.name = token->value.str;
+        break;
+      case TOKEN_PAREN_LEFT:
+        free(expr);
+        next();
+        expr = parse_arith_expression();
+        ASSERT_PEEK_NEXT(TOKEN_PAREN_RIGHT);
+        break;
+      case TOKEN_OP_ADD:
+      case TOKEN_OP_SUB:
+      case TOKEN_OP_MUL:
+      case TOKEN_OP_DIV:
+        is_op = true;
+        if (root == NULL) {
+          fatal_token("lhs for binary operation not found", index);
+          exit(EXIT_FAILURE);
+        }
+        arith_operator_t op = parse_arith_op(token);
+        arith_operation_t *operation = malloc(sizeof(arith_operation_t));
+        operation->op = op;
+        operation->lhs = root;
+        operation->rhs = NULL;
+
+        expr->instance.op = operation;
+        expr->type = ARITH_OP;
+        break;
+      default:
+        free(expr);
+        unrecognized = true;
+        break;
+    }
+    if (unrecognized)
+      break;
+    if (is_op || root == NULL) {
+      root = expr;
+    } else {
+      if (root->type == ARITH_OP && root->instance.op->rhs == NULL) {
+        root->instance.op->rhs = expr;
+      } else {
+        fatal_token("expected end of arithmetic expression", index - 1);
+        exit(EXIT_FAILURE);
+      }
+    }
+    next();
+  }
+  if (root == NULL) {
+    fatal_token("expected expression", index - 1);
     exit(EXIT_FAILURE);
   }
-  return elm;
-}
-
-arith_operation_t *parse_arith_operation() {
-  // TODO: parse more than binary expr
-  arith_expression_t *lhs = parse_arith_expression();
-  arith_operator_t op = parse_arith_op();
-  arith_expression_t *rhs = parse_arith_expression();
-  arith_operation_t *expr = malloc(sizeof(arith_operation_t));
-  expr->op = op;
-  expr->lhs = lhs;
-  expr->rhs = rhs;
-  return expr;
+  return root;
 }
 
 expression_t *parse_expression() {
@@ -179,7 +219,6 @@ ret_statement_t *parse_ret_statement() {
 }
 
 statement_t *parse_statement() {
-
   statement_t *stmt = malloc(sizeof(statement_t));
   if (peek_next_type(TOKEN_TYPE_INT) != NULL) {
     stmt->type = STMT_DECLARE;

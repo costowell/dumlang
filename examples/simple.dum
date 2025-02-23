@@ -1,7 +1,3 @@
 int dumlang() {
-    int a = 10;
-    int b = a;
-    int c = b;
-    int d = c;
-    return c;
+    return 10 * (5 + 4) * 2;
 }

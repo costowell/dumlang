@@ -131,6 +131,24 @@ void sub_imm32(reg_t reg, int32_t imm) {
   emit();
 }
 
+void add_reg_to_reg(reg_t dst, reg_t src) {
+  REXBR(dst, src, REX_W);
+  instr_set_opcode(ADD_R_RM);
+  instr_set_mod(0b11);
+  instr_set_rm(src);
+  instr_set_reg(dst);
+  emit();
+}
+
+void imul_reg_to_reg(reg_t dst, reg_t src) {
+  REXBR(dst, src, REX_W);
+  instr_set_opcode(IMUL_R_RM);
+  instr_set_mod(0b11);
+  instr_set_rm(src);
+  instr_set_reg(dst);
+  emit();
+}
+
 void ret() {
   instr_set_opcode(RET_NEAR);
   emit();
@@ -149,6 +167,21 @@ void evaluate_arith_expression(arith_expression_t *expr, reg_t result, scope_t *
       if (scope_var == NULL)
         errx(EXIT_FAILURE, "error: '%s' not found in scope", expr->instance.name);
       mov_mem_offset_to_reg(RAX, RBP, -scope_var->position);
+      break;
+    case ARITH_OP:
+      ;
+      const arith_operation_t *op = expr->instance.op;
+      evaluate_arith_expression(op->lhs, RAX, scope);
+      evaluate_arith_expression(op->rhs, RCX, scope);
+
+      switch (op->op) {
+        case OP_ADD:
+          add_reg_to_reg(RAX, RCX);
+          break;
+        case OP_MUL:
+          imul_reg_to_reg(RAX, RCX);
+          break;
+      }
       break;
   }
 }
