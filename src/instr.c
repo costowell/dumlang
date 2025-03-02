@@ -1,10 +1,18 @@
 #include "instr.h"
 
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #define MAX_INSTR_SIZE 15
 #define REX_BASE 0b01000000
+
+#define BYTE(NUM, INDEX) ((uint8_t)(((NUM) >> ((INDEX) * 8)) & 0xFF))
+#define INT_TO_BYTEARR(BYTEARR, NUM, SIZE)                                     \
+  do {                                                                         \
+    for (int BYTEARR##_count = 0; BYTEARR##_count < SIZE; BYTEARR##_count++)   \
+      BYTEARR[BYTEARR##_count] = BYTE(NUM, BYTEARR##_count);                   \
+    BYTEARR##_size = SIZE;                                                     \
+  } while (0)
 
 uint8_t rex_prefix = 0;
 
@@ -46,19 +54,19 @@ uint8_t instr_flush(uint8_t **buf) {
   // Opcode
   if (opc_byte != 0) {
     switch (opc_type) {
-      case SINGLE_BYTE:
-        break;
-      case DOUBLE_BYTE:
-        append_uint8(0x0F);
-        break;
-      case TRIPLE_BYTE_A:
-        append_uint8(0x0F);
-        append_uint8(0x38);
-        break;
-      case TRIPLE_BYTE_B:
-        append_uint8(0x0F);
-        append_uint8(0x3A);
-        break;
+    case SINGLE_BYTE:
+      break;
+    case DOUBLE_BYTE:
+      append_uint8(0x0F);
+      break;
+    case TRIPLE_BYTE_A:
+      append_uint8(0x0F);
+      append_uint8(0x38);
+      break;
+    case TRIPLE_BYTE_B:
+      append_uint8(0x0F);
+      append_uint8(0x3A);
+      break;
     }
     append_uint8(opc_byte);
   } else {
@@ -99,9 +107,7 @@ void instr_set_opcode_inc(opcode_t opc, uint8_t off) {
   opc_byte += off;
 }
 
-void instr_set_rex(rex_flags_t rex) {
-  rex_prefix = (uint8_t)rex;
-}
+void instr_set_rex(rex_flags_t rex) { rex_prefix = (uint8_t)rex; }
 
 void instr_set_mod(uint8_t m) {
   modregrm = true;
@@ -115,59 +121,12 @@ void instr_set_rm(uint8_t r) {
   modregrm = true;
   rm = r & 0x07;
 }
-void instr_set_disp8(int8_t i) {
-  imm[0] = i;
-  imm_size = 1;
-}
-void instr_set_disp16(int16_t i) {
-  imm[0] = i & 0xFF;
-  imm[1] = (i >> 8) & 0xFF;
-  imm_size = 2;
-}
-void instr_set_disp32(int32_t i) {
-  imm[0] = i & 0xFF;
-  imm[1] = (i >> 8) & 0xFF;
-  imm[2] = (i >> 16) & 0xFF;
-  imm[3] = (i >> 24) & 0xFF;
-  imm_size = 4;
-}
+void instr_set_disp8(uint8_t i) { INT_TO_BYTEARR(disp, i, 1); }
+void instr_set_disp16(uint16_t i) { INT_TO_BYTEARR(disp, i, 2); }
+void instr_set_disp32(uint32_t i) { INT_TO_BYTEARR(disp, i, 4); }
+void instr_set_disp64(uint64_t i) { INT_TO_BYTEARR(disp, i, 8); }
 
-void instr_set_disp64(int64_t i) {
-  imm[0] = i & 0xFF;
-  imm[1] = (i >> 8) & 0xFF;
-  imm[2] = (i >> 16) & 0xFF;
-  imm[3] = (i >> 24) & 0xFF;
-  imm[4] = (i >> 32) & 0xFF;
-  imm[5] = (i >> 40) & 0xFF;
-  imm[6] = (i >> 48) & 0xFF;
-  imm[7] = (i >> 56) & 0xFF;
-  imm_size = 8;
-}
-void instr_set_imm8(int8_t i) {
-  imm[0] = i;
-  imm_size = 1;
-}
-void instr_set_imm16(int16_t i) {
-  imm[0] = i & 0xFF;
-  imm[1] = (i >> 8) & 0xFF;
-  imm_size = 2;
-}
-void instr_set_imm32(int32_t i) {
-  imm[0] = i & 0xFF;
-  imm[1] = (i >> 8) & 0xFF;
-  imm[2] = (i >> 16) & 0xFF;
-  imm[3] = (i >> 24) & 0xFF;
-  imm_size = 4;
-}
-
-void instr_set_imm64(int64_t i) {
-  imm[0] = i & 0xFF;
-  imm[1] = (i >> 8) & 0xFF;
-  imm[2] = (i >> 16) & 0xFF;
-  imm[3] = (i >> 24) & 0xFF;
-  imm[4] = (i >> 32) & 0xFF;
-  imm[5] = (i >> 40) & 0xFF;
-  imm[6] = (i >> 48) & 0xFF;
-  imm[7] = (i >> 56) & 0xFF;
-  imm_size = 8;
-}
+void instr_set_imm8(uint8_t i) { INT_TO_BYTEARR(imm, i, 1); }
+void instr_set_imm16(uint16_t i) { INT_TO_BYTEARR(imm, i, 2); }
+void instr_set_imm32(uint32_t i) { INT_TO_BYTEARR(imm, i, 4); }
+void instr_set_imm64(uint64_t i) { INT_TO_BYTEARR(imm, i, 8); }

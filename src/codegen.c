@@ -22,7 +22,7 @@ uint8_t text[TEXT_SIZE];
 size_t text_len;
 
 char strtab[STRTAB_SIZE];
-unsigned int strtab_len;
+size_t strtab_len;
 
 bool regtab[NUM_REGISTERS] = {
   [RSP] = true,
@@ -124,7 +124,7 @@ void mov_regs(reg_t dst, reg_t src) {
 void mov_imm64(reg_t reg, int64_t imm) {
   REXB(reg, REX_W);
   instr_set_opcode_inc(MOV_R_IMM, reg_num(reg));
-  instr_set_imm64(imm);
+  instr_set_imm64((uint64_t)imm);
   emit();
 }
 
@@ -134,7 +134,7 @@ void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
   instr_set_mod(0b10); // Four byte signed displacement
   instr_set_rm(src_base);
   instr_set_reg(dst);
-  instr_set_disp32(displacement);
+  instr_set_disp32((uint32_t)displacement);
   emit();
 }
 
@@ -144,7 +144,7 @@ void mov_reg_to_mem_offset(reg_t src, reg_t dst_base, int32_t displacement) {
   instr_set_mod(0b10); // Four byte signed displacement
   instr_set_rm(dst_base);
   instr_set_reg(src);
-  instr_set_disp32(displacement);
+  instr_set_disp32((uint32_t)displacement);
   emit();
 }
 
@@ -154,7 +154,7 @@ void sub_imm32(reg_t reg, int32_t imm) {
   instr_set_mod(0b11);
   instr_set_rm(reg);
   instr_set_reg(0b101);
-  instr_set_imm32(imm);
+  instr_set_imm32((uint32_t)imm);
   emit();
 }
 
@@ -193,7 +193,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
     if (scope_var == NULL)
       errx(EXIT_FAILURE, "error: '%s' not found in scope", expr->instance.name);
     reg_t r = next_reg();
-    mov_mem_offset_to_reg(r, RBP, -scope_var->position);
+    mov_mem_offset_to_reg(r, RBP, scope_var->position);
     return r;
   } else if (expr->type == ARITH_OP) {
     const arith_operation_t *op = expr->instance.op;
@@ -233,12 +233,12 @@ void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
   if (scope_get(scope, stmt->name) != NULL)
     errx(EXIT_FAILURE, "error: '%s' already declared", stmt->name);
 
-  const scope_var_t *scope_var = scope_insert(
-      scope, stmt->name, 8); // Size is by default 4 since INT is the only type
+  // Size is by default 4 since INT is the only type
+  const scope_var_t *scope_var = scope_insert(scope, stmt->name, 8);
   added_vars[(*added_vars_size)++] = stmt->name;
 
   evaluate_expression(stmt->expr, RAX, scope);
-  mov_reg_to_mem_offset(RAX, RBP, -scope_var->position);
+  mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
 }
 
 void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
@@ -290,7 +290,7 @@ uint32_t calc_stack_size(code_block_t *code_block) {
 void write_func(function_t *func) {
   // Create almost complete symbol (need section size)
   Elf64_Sym sym = {
-      .st_name = strtab_len,
+      .st_name = (Elf64_Word)(strtab_len),
       .st_info = ELF64_ST_INFO(STB_GLOBAL, STT_FUNC),
       .st_other = STV_DEFAULT,
       .st_value = text_len,
@@ -301,7 +301,7 @@ void write_func(function_t *func) {
   // Setup stack
   push(RBP);
   mov_regs(RBP, RSP);
-  sub_imm32(RSP, stack_size);
+  sub_imm32(RSP, (int32_t)stack_size);
 
   // Init scope
   scope_t *scope = scope_init();

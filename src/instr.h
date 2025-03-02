@@ -6,7 +6,7 @@
 #define MAX_INSTR_SIZE 15
 
 // Resource: https://wiki.osdev.org/System_V_ABI
-typedef enum _reg {
+typedef enum _reg : uint8_t {
   RAX,
   RCX,
   RDX,
@@ -26,21 +26,21 @@ typedef enum _reg {
   NUM_REGISTERS,
 } reg_t;
 
-typedef enum _rex_flags {
+typedef enum _rex_flags : uint8_t {
   REX_B = 1 << 0,        // extension to the MODRM.rm field or the SIB.base field
   REX_X = 1 << 1,        // extension to the SIB.index field
   REX_R = 1 << 2,        // extension to the MODRM.reg field
   REX_W = 1 << 3,        // 1 indicates 64bit operand size, 0 indicates default operand size
 } rex_flags_t;
 
-typedef enum _opcode_type {
+typedef enum _opcode_type : uint8_t {
   SINGLE_BYTE = 1,   // <op>
   DOUBLE_BYTE,       // 0x0F <op>
   TRIPLE_BYTE_A,     // 0x0F 0x38 <op>
   TRIPLE_BYTE_B,     // 0x0F 0x3A <op>
 } opcode_type_t;
 
-typedef enum _opcode {
+typedef enum _opcode : uint32_t {
   MOV_R_IMM = 1,
   MOV_R_RM,
   MOV_RM_R,
@@ -86,13 +86,13 @@ void instr_set_rex(rex_flags_t rex);
 void instr_set_mod(uint8_t mod);
 void instr_set_reg(reg_t reg);
 void instr_set_rm(uint8_t rm);
-void instr_set_imm8(int8_t i);
-void instr_set_imm16(int16_t i);
-void instr_set_imm32(int32_t i);
-void instr_set_imm64(int64_t i);
-void instr_set_disp8(int8_t i);
-void instr_set_disp16(int16_t i);
-void instr_set_disp32(int32_t i);
-void instr_set_disp64(int64_t i);
+void instr_set_imm8(uint8_t i);
+void instr_set_imm16(uint16_t i);
+void instr_set_imm32(uint32_t i);
+void instr_set_imm64(uint64_t i);
+void instr_set_disp8(uint8_t i);
+void instr_set_disp16(uint16_t i);
+void instr_set_disp32(uint32_t i);
+void instr_set_disp64(uint64_t i);
 
 #endif

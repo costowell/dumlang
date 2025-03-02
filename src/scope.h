@@ -12,7 +12,7 @@ typedef struct _scope {
 } scope_t;
 
 typedef struct _scope_var {
-    uint32_t position;
+    int32_t position;
     uint8_t size;
 } scope_var_t;
 
