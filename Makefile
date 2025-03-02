@@ -1,4 +1,4 @@
-CC = c99
+CC = gcc -std=c17
 
 SRCD = src
 OBJD = obj
