@@ -277,9 +277,9 @@ function_t *parse_function() {
     fatal_token_type(TOKEN_IDENTIFIER, index - 1);
     exit(EXIT_FAILURE);
   }
-  ASSERT_NEXT(TOKEN_PAREN_LEFT)
+  ASSERT_NEXT(TOKEN_PAREN_LEFT);
   // TODO: parse args
-  ASSERT_NEXT(TOKEN_PAREN_RIGHT)
+  ASSERT_NEXT(TOKEN_PAREN_RIGHT);
   code_block = parse_code_block();
 
   // Return func
