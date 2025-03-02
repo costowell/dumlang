@@ -179,6 +179,12 @@ void ret() {
 /* Write Machine Instructions */
 
 reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
+  // Arith expr parsing might not populate all nodes in the tree
+  // because I'm bad at programming
+  // Lets check before we do anything and leave a nice error message
+  if (expr == NULL) {
+    errx(EXIT_FAILURE, "NULL node found in arith tree");
+  }
   if (expr->type == ARITH_NUM) {
     reg_t r = next_reg();
     mov_imm64(r, expr->instance.int64);

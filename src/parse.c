@@ -1,6 +1,8 @@
 #include "parse.h"
 
+#include <err.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -94,9 +96,21 @@ arith_operator_t parse_arith_op(token_t *token) {
   }
 }
 
+uint8_t op_precedence(arith_operator_t op) {
+  switch (op) {
+  case OP_MUL:
+  case OP_DIV:
+    return 2;
+  case OP_ADD:
+  case OP_SUB:
+    return 1;
+  }
+}
+
 arith_expression_t *parse_arith_expression() {
   token_t *token;
   arith_expression_t *root = NULL;
+  arith_expression_t *latest_op = NULL;
   while ((token = peek()) != NULL) {
     arith_expression_t *expr = malloc(sizeof(arith_expression_t));
     bool is_op = false;
@@ -128,24 +142,58 @@ arith_expression_t *parse_arith_expression() {
       arith_operator_t op = parse_arith_op(token);
       arith_operation_t *operation = malloc(sizeof(arith_operation_t));
       operation->op = op;
-      operation->lhs = root;
+
+      // Will figure out what RHS and LHS are later
+      operation->lhs = NULL;
       operation->rhs = NULL;
 
       expr->instance.op = operation;
       expr->type = ARITH_OP;
+
       break;
     default:
       free(expr);
       unrecognized = true;
       break;
     }
+
+    // Check for incomplete tree WHEN
+    // 1) done parsing expr (peeks an unrecognized char)
+    // 2) parsing an operator
+    if (is_op || unrecognized) {
+      if ((latest_op != NULL && latest_op->instance.op->rhs == NULL)) {
+        errx(EXIT_FAILURE, "expected arith value, got arith operator");
+      }
+    }
+
     if (unrecognized)
       break;
-    if (is_op || root == NULL) {
+
+    if (root == NULL) {
       root = expr;
+    } else if (is_op) {
+      // If there is no latest op or new operator's precedence is less than
+      // the previous operator's precedence, then reparent root
+      // Otherwise, reparent rhs of the latest op to lhs of new operator
+      //
+      // e.g. 1 * 2 + 3 * 4
+      // reparent root for +
+      // reparent 3 to lhs of *
+      //
+      if (latest_op == NULL || op_precedence(expr->instance.op->op) <
+                                   op_precedence(latest_op->instance.op->op)) {
+        expr->instance.op->lhs = root;
+        root = expr;
+        latest_op = expr;
+      } else {
+        arith_expression_t *tmp = latest_op->instance.op->rhs;
+        latest_op->instance.op->rhs = expr;
+        expr->instance.op->lhs = tmp;
+        latest_op = expr;
+      }
     } else {
-      if (root->type == ARITH_OP && root->instance.op->rhs == NULL) {
-        root->instance.op->rhs = expr;
+      if (latest_op->type == ARITH_OP && latest_op->instance.op->rhs == NULL) {
+        latest_op->instance.op->rhs = expr;
       } else {
         fatal_token("expected end of arithmetic expression", index - 1);
         exit(EXIT_FAILURE);
