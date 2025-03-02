@@ -1,8 +1,8 @@
 #ifndef _CODEGEN_H
 #define _CODEGEN_H
 
-#include "parse.h"
 #include "hashmap.h"
+#include "parse.h"
 
 void gen_object(function_t **funcs, const char *file);
 

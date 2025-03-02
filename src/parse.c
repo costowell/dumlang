@@ -1,8 +1,8 @@
 #include "parse.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 static size_t index;
 static token_array_t *arr;
@@ -31,9 +31,7 @@ void fatal_token_type(token_type_t expected, size_t culprit) {
   printf("\n");
 }
 
-token_t *peek() {
-  return array_get(arr, index);
-}
+token_t *peek() { return array_get(arr, index); }
 
 token_t *peek_next_type(token_type_t expected) {
   token_t *token = peek();
@@ -51,21 +49,21 @@ token_t *next_type(token_type_t expected) {
   return token;
 }
 
-#define ASSERT_PEEK_NEXT(Y)                                                         \
-  {                                                                            \
-    if (peek_next_type((Y)) == NULL) {                                              \
-      fatal_token_type((Y), (index));                                      \
+#define ASSERT_PEEK_NEXT(Y)                                                    \
+  do {                                                                         \
+    if (peek_next_type((Y)) == NULL) {                                         \
+      fatal_token_type((Y), (index));                                          \
       exit(EXIT_FAILURE);                                                      \
     }                                                                          \
-  }
+  } while (0)
 
 #define ASSERT_NEXT(Y)                                                         \
-  {                                                                            \
+  do {                                                                         \
     if (next_type((Y)) == NULL) {                                              \
       fatal_token_type((Y), (index - 1));                                      \
       exit(EXIT_FAILURE);                                                      \
     }                                                                          \
-  }
+  } while (0)
 
 /// Parsing
 
@@ -104,42 +102,42 @@ arith_expression_t *parse_arith_expression() {
     bool is_op = false;
     bool unrecognized = false;
     switch (token->type) {
-      case TOKEN_INT:
-        expr->type = ARITH_NUM;
-        expr->instance.int64 = token->value.int64;
-        break;
-      case TOKEN_IDENTIFIER:
-        expr->type = ARITH_IDENT;
-        expr->instance.name = token->value.str;
-        break;
-      case TOKEN_PAREN_LEFT:
-        free(expr);
-        next();
-        expr = parse_arith_expression();
-        ASSERT_PEEK_NEXT(TOKEN_PAREN_RIGHT);
-        break;
-      case TOKEN_OP_ADD:
-      case TOKEN_OP_SUB:
-      case TOKEN_OP_MUL:
-      case TOKEN_OP_DIV:
-        is_op = true;
-        if (root == NULL) {
-          fatal_token("lhs for binary operation not found", index);
-          exit(EXIT_FAILURE);
-        }
-        arith_operator_t op = parse_arith_op(token);
-        arith_operation_t *operation = malloc(sizeof(arith_operation_t));
-        operation->op = op;
-        operation->lhs = root;
-        operation->rhs = NULL;
+    case TOKEN_INT:
+      expr->type = ARITH_NUM;
+      expr->instance.int64 = token->value.int64;
+      break;
+    case TOKEN_IDENTIFIER:
+      expr->type = ARITH_IDENT;
+      expr->instance.name = token->value.str;
+      break;
+    case TOKEN_PAREN_LEFT:
+      free(expr);
+      next();
+      expr = parse_arith_expression();
+      ASSERT_PEEK_NEXT(TOKEN_PAREN_RIGHT);
+      break;
+    case TOKEN_OP_ADD:
+    case TOKEN_OP_SUB:
+    case TOKEN_OP_MUL:
+    case TOKEN_OP_DIV:
+      is_op = true;
+      if (root == NULL) {
+        fatal_token("lhs for binary operation not found", index);
+        exit(EXIT_FAILURE);
+      }
+      arith_operator_t op = parse_arith_op(token);
+      arith_operation_t *operation = malloc(sizeof(arith_operation_t));
+      operation->op = op;
+      operation->lhs = root;
+      operation->rhs = NULL;
 
-        expr->instance.op = operation;
-        expr->type = ARITH_OP;
-        break;
-      default:
-        free(expr);
-        unrecognized = true;
-        break;
+      expr->instance.op = operation;
+      expr->type = ARITH_OP;
+      break;
+    default:
+      free(expr);
+      unrecognized = true;
+      break;
     }
     if (unrecognized)
       break;

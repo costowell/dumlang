@@ -3,17 +3,17 @@
 
 #include "hashmap.h"
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef struct _scope {
-    uint32_t stacksize;
-    hashmap_t map;
+  uint32_t stacksize;
+  hashmap_t map;
 } scope_t;
 
 typedef struct _scope_var {
-    int32_t position;
-    uint8_t size;
+  int32_t position;
+  uint8_t size;
 } scope_var_t;
 
 scope_t *scope_init();

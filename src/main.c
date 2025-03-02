@@ -1,7 +1,7 @@
-#include "lex.h"
-#include "parse.h"
 #include "codegen.h"
 #include "instr.h"
+#include "lex.h"
+#include "parse.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   strcat(object_name, ".o");
 
   function_t **funcs = parse_ast(tokens);
+
   gen_object(funcs, object_name);
 
   return EXIT_SUCCESS;

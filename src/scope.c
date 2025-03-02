@@ -9,7 +9,8 @@ scope_t *scope_init() {
 }
 
 const scope_var_t *scope_insert(scope_t *scope, char *str, uint8_t size) {
-  const scope_var_t *elm = hashmap_get(&scope->map, str, (unsigned int)strlen(str));
+  const scope_var_t *elm =
+      hashmap_get(&scope->map, str, (unsigned int)strlen(str));
   if (elm != NULL) {
     return NULL;
   }
@@ -24,11 +25,12 @@ const scope_var_t *scope_insert(scope_t *scope, char *str, uint8_t size) {
 }
 
 bool scope_remove(scope_t *scope, char *str) {
-    return hashmap_remove(&scope->map, str, (unsigned int)strlen(str)) == 0;
+  return hashmap_remove(&scope->map, str, (unsigned int)strlen(str)) == 0;
 }
 
 const scope_var_t *scope_get(scope_t *scope, char *str) {
-  const scope_var_t *elm = hashmap_get(&scope->map, str, (unsigned int)strlen(str));
+  const scope_var_t *elm =
+      hashmap_get(&scope->map, str, (unsigned int)strlen(str));
   return elm;
 }
 

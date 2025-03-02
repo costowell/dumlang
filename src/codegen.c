@@ -24,12 +24,7 @@ size_t text_len;
 char strtab[STRTAB_SIZE];
 size_t strtab_len;
 
-bool regtab[NUM_REGISTERS] = {
-  [RSP] = true,
-  [RBP] = true,
-  0
-};
-
+bool regtab[NUM_REGISTERS] = {[RSP] = true, [RBP] = true, 0};
 
 /* Utils */
 

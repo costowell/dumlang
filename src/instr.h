@@ -27,17 +27,18 @@ typedef enum _reg : uint8_t {
 } reg_t;
 
 typedef enum _rex_flags : uint8_t {
-  REX_B = 1 << 0,        // extension to the MODRM.rm field or the SIB.base field
-  REX_X = 1 << 1,        // extension to the SIB.index field
-  REX_R = 1 << 2,        // extension to the MODRM.reg field
-  REX_W = 1 << 3,        // 1 indicates 64bit operand size, 0 indicates default operand size
+  REX_B = 1 << 0, // extension to the MODRM.rm field or the SIB.base field
+  REX_X = 1 << 1, // extension to the SIB.index field
+  REX_R = 1 << 2, // extension to the MODRM.reg field
+  REX_W = 1 << 3, // 1 indicates 64bit operand size,
+                  // 0 indicates default operand size
 } rex_flags_t;
 
 typedef enum _opcode_type : uint8_t {
-  SINGLE_BYTE = 1,   // <op>
-  DOUBLE_BYTE,       // 0x0F <op>
-  TRIPLE_BYTE_A,     // 0x0F 0x38 <op>
-  TRIPLE_BYTE_B,     // 0x0F 0x3A <op>
+  SINGLE_BYTE = 1, // <op>
+  DOUBLE_BYTE,     // 0x0F <op>
+  TRIPLE_BYTE_A,   // 0x0F 0x38 <op>
+  TRIPLE_BYTE_B,   // 0x0F 0x3A <op>
 } opcode_type_t;
 
 typedef enum _opcode : uint32_t {
@@ -54,29 +55,17 @@ typedef enum _opcode : uint32_t {
 } opcode_t;
 
 static const uint8_t opcode_enc_map[] = {
-  [MOV_R_IMM] = 0xB8,
-  [MOV_R_RM] = 0x89,
-  [MOV_RM_R] = 0x8B,
-  [SUB_EAX_IMM] = 0x2D,
-  [SUB_RM_IMM] = 0x81,
-  [ADD_R_RM] = 0x03,
-  [IMUL_R_RM] = 0xAF,
-  [PUSH_R] = 0x50,
-  [POP_R] = 0x58,
-  [RET_NEAR] = 0xC3
-};
+    [MOV_R_IMM] = 0xB8,   [MOV_R_RM] = 0x89,   [MOV_RM_R] = 0x8B,
+    [SUB_EAX_IMM] = 0x2D, [SUB_RM_IMM] = 0x81, [ADD_R_RM] = 0x03,
+    [IMUL_R_RM] = 0xAF,   [PUSH_R] = 0x50,     [POP_R] = 0x58,
+    [RET_NEAR] = 0xC3};
 
 static const opcode_type_t opcode_type_map[] = {
-  [MOV_R_IMM] = SINGLE_BYTE,
-  [MOV_R_RM] = SINGLE_BYTE,
-  [MOV_RM_R] = SINGLE_BYTE,
-  [SUB_EAX_IMM] = SINGLE_BYTE,
-  [SUB_RM_IMM] = SINGLE_BYTE,
-  [ADD_R_RM] = SINGLE_BYTE,
-  [IMUL_R_RM] = DOUBLE_BYTE,
-  [PUSH_R] = SINGLE_BYTE,
-  [POP_R] = SINGLE_BYTE,
-  [RET_NEAR] = SINGLE_BYTE,
+    [MOV_R_IMM] = SINGLE_BYTE,  [MOV_R_RM] = SINGLE_BYTE,
+    [MOV_RM_R] = SINGLE_BYTE,   [SUB_EAX_IMM] = SINGLE_BYTE,
+    [SUB_RM_IMM] = SINGLE_BYTE, [ADD_R_RM] = SINGLE_BYTE,
+    [IMUL_R_RM] = DOUBLE_BYTE,  [PUSH_R] = SINGLE_BYTE,
+    [POP_R] = SINGLE_BYTE,      [RET_NEAR] = SINGLE_BYTE,
 };
 
 uint8_t instr_flush(uint8_t **buf);
