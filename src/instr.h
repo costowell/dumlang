@@ -55,6 +55,13 @@ typedef enum _opcode : uint32_t {
   RET_NEAR
 } opcode_t;
 
+typedef enum _mod : uint8_t {
+  MOD_INDIRECT = 0b00,
+  MOD_DISP_1 = 0b01,
+  MOD_DISP_4 = 0b10,
+  MOD_REG = 0b11
+} mod_t;
+
 static const uint8_t opcode_enc_map[] = {
     [MOV_R_IMM] = 0xB8,   [MOV_R_RM] = 0x89,   [MOV_RM_R] = 0x8B,
     [SUB_EAX_IMM] = 0x2D, [SUB_RM_IMM] = 0x81, [ADD_R_RM] = 0x03,
@@ -74,7 +81,7 @@ uint8_t instr_flush(uint8_t **buf);
 void instr_set_opcode(opcode_t opc);
 void instr_set_opcode_inc(opcode_t opc, uint8_t off);
 void instr_set_rex(rex_flags_t rex);
-void instr_set_mod(uint8_t mod);
+void instr_set_mod(mod_t mod);
 void instr_set_reg(reg_t reg);
 void instr_set_rm(uint8_t rm);
 void instr_set_imm8(uint8_t i);

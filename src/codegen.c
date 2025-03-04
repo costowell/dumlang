@@ -111,7 +111,7 @@ void push(reg_t reg) {
 void mov_regs(reg_t dst, reg_t src) {
   REXBR(src, dst, REX_W);
   instr_set_opcode(MOV_R_RM);
-  instr_set_mod(0b11);
+  instr_set_mod(MOD_REG);
   instr_set_reg(src);
   instr_set_rm(dst);
   emit();
@@ -127,7 +127,7 @@ void mov_imm64(reg_t reg, int64_t imm) {
 void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
   REXBR(src_base, dst, REX_W);
   instr_set_opcode(MOV_RM_R);
-  instr_set_mod(0b10); // Four byte signed displacement
+  instr_set_mod(MOD_DISP_4); // Four byte signed displacement
   instr_set_rm(src_base);
   instr_set_reg(dst);
   instr_set_disp32((uint32_t)displacement);
@@ -137,7 +137,7 @@ void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
 void mov_reg_to_mem_offset(reg_t src, reg_t dst_base, int32_t displacement) {
   REXBR(dst_base, src, REX_W);
   instr_set_opcode(MOV_R_RM);
-  instr_set_mod(0b10); // Four byte signed displacement
+  instr_set_mod(MOD_DISP_1); // Four byte signed displacement
   instr_set_rm(dst_base);
   instr_set_reg(src);
   instr_set_disp32((uint32_t)displacement);
@@ -147,7 +147,7 @@ void mov_reg_to_mem_offset(reg_t src, reg_t dst_base, int32_t displacement) {
 void sub_imm32(reg_t reg, int32_t imm) {
   REXB(reg, REX_W);
   instr_set_opcode(SUB_RM_IMM);
-  instr_set_mod(0b11);
+  instr_set_mod(MOD_REG);
   instr_set_rm(reg);
   instr_set_reg(0b101);
   instr_set_imm32((uint32_t)imm);
@@ -157,7 +157,7 @@ void sub_imm32(reg_t reg, int32_t imm) {
 void sub_reg_to_reg(reg_t dst, reg_t src) {
   REXBR(dst, src, REX_W);
   instr_set_opcode(SUB_R_RM);
-  instr_set_mod(0b11);
+  instr_set_mod(MOD_REG);
   instr_set_rm(src);
   instr_set_reg(dst);
   emit();
@@ -166,7 +166,7 @@ void sub_reg_to_reg(reg_t dst, reg_t src) {
 void add_reg_to_reg(reg_t dst, reg_t src) {
   REXBR(dst, src, REX_W);
   instr_set_opcode(ADD_R_RM);
-  instr_set_mod(0b11);
+  instr_set_mod(MOD_REG);
   instr_set_rm(src);
   instr_set_reg(dst);
   emit();
@@ -175,7 +175,7 @@ void add_reg_to_reg(reg_t dst, reg_t src) {
 void imul_reg_to_reg(reg_t dst, reg_t src) {
   REXBR(dst, src, REX_W);
   instr_set_opcode(IMUL_R_RM);
-  instr_set_mod(0b11);
+  instr_set_mod(MOD_REG);
   instr_set_rm(src);
   instr_set_reg(dst);
   emit();

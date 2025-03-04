@@ -20,7 +20,7 @@ opcode_type_t opc_type;
 uint8_t opc_byte;
 
 bool modregrm = false;
-uint8_t mod = 0;
+mod_t mod = 0;
 uint8_t reg = 0;
 uint8_t rm = 0;
 
@@ -109,7 +109,7 @@ void instr_set_opcode_inc(opcode_t opc, uint8_t off) {
 
 void instr_set_rex(rex_flags_t rex) { rex_prefix = (uint8_t)rex; }
 
-void instr_set_mod(uint8_t m) {
+void instr_set_mod(mod_t m) {
   modregrm = true;
   mod = m;
 }
