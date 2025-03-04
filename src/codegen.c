@@ -2,6 +2,7 @@
 #include "hashmap.h"
 #include "instr.h"
 #include "obj.h"
+#include "parse.h"
 #include "scope.h"
 
 #include <err.h>
@@ -153,6 +154,15 @@ void sub_imm32(reg_t reg, int32_t imm) {
   emit();
 }
 
+void sub_reg_to_reg(reg_t dst, reg_t src) {
+  REXBR(dst, src, REX_W);
+  instr_set_opcode(SUB_R_RM);
+  instr_set_mod(0b11);
+  instr_set_rm(src);
+  instr_set_reg(dst);
+  emit();
+}
+
 void add_reg_to_reg(reg_t dst, reg_t src) {
   REXBR(dst, src, REX_W);
   instr_set_opcode(ADD_R_RM);
@@ -209,6 +219,9 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
       break;
     case OP_MUL:
       imul_reg_to_reg(lhsr, rhsr);
+      break;
+    case OP_SUB:
+      sub_reg_to_reg(lhsr, rhsr);
       break;
     }
     return lhsr;
