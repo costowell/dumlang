@@ -79,6 +79,8 @@ void print_token(const token_t *token) {
 /// TODO: parse a little less messily
 /// Didn't want to 'cheat' and use regex, and this nightmare
 /// can definitely be improved even without it
+///
+/// 03/01/2025 - Oh god this is an awful lexer I'll fix it later
 token_array_t *parse_tokens(char *str, size_t size) {
   token_array_t *arr = array_init();
 
@@ -101,7 +103,8 @@ token_array_t *parse_tokens(char *str, size_t size) {
       value.str = calloc(id_size, sizeof(char));
       strncpy(value.str, str + i, id_size - 1);
       i += id_size - 2;
-    } else if (is_valid_number(str[i]) || str[i] == '-') {
+    } else if (is_valid_number(str[i]) ||
+               (str[i] == '-' && str[i + 1] != ' ')) {
       type = TOKEN_INT;
       int num = 0;
       int neg = 1;
