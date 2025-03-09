@@ -1,4 +1,5 @@
 #include "parse.h"
+#include "lex.h"
 
 #include <err.h>
 #include <stdbool.h>
@@ -80,20 +81,24 @@ type_t parse_type() {
   }
 }
 
-arith_operator_t parse_arith_op(token_t *token) {
+bool try_parse_arith_op(token_t *token, arith_operator_t *op) {
   switch (token->type) {
   case TOKEN_OP_ADD:
-    return OP_ADD;
+    *op = OP_ADD;
+    break;
   case TOKEN_OP_SUB:
-    return OP_SUB;
+    *op = OP_SUB;
+    break;
   case TOKEN_OP_MUL:
-    return OP_MUL;
+    *op = OP_MUL;
+    break;
   case TOKEN_OP_DIV:
-    return OP_DIV;
+    *op = OP_DIV;
+    break;
   default:
-    fatal_token("expected arithmetic operator", index - 1);
-    exit(EXIT_FAILURE);
+    return false;
   }
+  return true;
 }
 
 uint8_t op_precedence(arith_operator_t op) {
@@ -105,107 +110,59 @@ uint8_t op_precedence(arith_operator_t op) {
   case OP_SUB:
     return 1;
   }
+  errx(EXIT_FAILURE, "op_precedence(): unknown operator");
+}
+
+arith_expression_t *parse_arith_atom() {
+  token_t *token = next();
+  arith_expression_t *expr = malloc(sizeof(arith_expression_t));
+  switch (token->type) {
+  case TOKEN_IDENTIFIER:
+    expr->type = ARITH_IDENT;
+    expr->instance.name = token->value.str;
+    break;
+  case TOKEN_INT:
+    expr->type = ARITH_NUM;
+    expr->instance.int64 = token->value.int64;
+    break;
+  default:
+    fatal_token("expected identifier or int", index - 1);
+    exit(EXIT_FAILURE);
+  }
+  return expr;
+}
+
+// Pratt parsing!
+arith_expression_t *parse_arith_expression_bp(uint8_t min_prec) {
+  arith_expression_t *lhs = parse_arith_atom();
+
+  while (true) {
+    arith_operator_t oprtr;
+    token_t *oprtr_tok = peek();
+    if (oprtr_tok == NULL || !try_parse_arith_op(oprtr_tok, &oprtr)) {
+      break;
+    }
+
+    uint8_t prec = op_precedence(oprtr);
+    if (prec <= min_prec)
+      break;
+
+    next();
+
+    arith_expression_t *rhs = parse_arith_expression_bp(prec);
+    arith_operation_t *op = malloc(sizeof(arith_operation_t));
+    op->op = oprtr;
+    op->lhs = lhs;
+    op->rhs = rhs;
+    lhs = malloc(sizeof(arith_expression_t));
+    lhs->type = ARITH_OP;
+    lhs->instance.op = op;
+  }
+  return lhs;
 }
 
 arith_expression_t *parse_arith_expression() {
-  token_t *token;
-  arith_expression_t *root = NULL;
-  arith_expression_t *latest_op = NULL;
-  while ((token = peek()) != NULL) {
-    arith_expression_t *expr = malloc(sizeof(arith_expression_t));
-    bool is_op = false;
-    bool unrecognized = false;
-    switch (token->type) {
-    case TOKEN_INT:
-      expr->type = ARITH_NUM;
-      expr->instance.int64 = token->value.int64;
-      break;
-    case TOKEN_IDENTIFIER:
-      expr->type = ARITH_IDENT;
-      expr->instance.name = token->value.str;
-      break;
-    case TOKEN_PAREN_LEFT:
-      free(expr);
-      next();
-      expr = parse_arith_expression();
-      ASSERT_PEEK_NEXT(TOKEN_PAREN_RIGHT);
-      break;
-    case TOKEN_OP_ADD:
-    case TOKEN_OP_SUB:
-    case TOKEN_OP_MUL:
-    case TOKEN_OP_DIV:
-      is_op = true;
-      if (root == NULL) {
-        fatal_token("lhs for binary operation not found", index);
-        exit(EXIT_FAILURE);
-      }
-      arith_operator_t op = parse_arith_op(token);
-      arith_operation_t *operation = malloc(sizeof(arith_operation_t));
-      operation->op = op;
-
-      // Will figure out what RHS and LHS are later
-      operation->lhs = NULL;
-      operation->rhs = NULL;
-
-      expr->instance.op = operation;
-      expr->type = ARITH_OP;
-
-      break;
-    default:
-      free(expr);
-      unrecognized = true;
-      break;
-    }
-
-    // Check for incomplete tree WHEN
-    // 1) done parsing expr (peeks an unrecognized char)
-    // 2) parsing an operator
-    if (is_op || unrecognized) {
-      if ((latest_op != NULL && latest_op->instance.op->rhs == NULL)) {
-        errx(EXIT_FAILURE, "expected arith value, got arith operator");
-      }
-    }
-
-    if (unrecognized)
-      break;
-
-    if (root == NULL) {
-      root = expr;
-    } else if (is_op) {
-      // If there is no latest op or new operator's precedence is less than
-      // the previous operator's precedence, then reparent root
-      // Otherwise, reparent rhs of the latest op to lhs of new operator
-      //
-      // e.g. 1 * 2 + 3 * 4
-      // reparent root for +
-      // reparent 3 to lhs of *
-      //
-      if (latest_op == NULL || op_precedence(expr->instance.op->op) <
-                                   op_precedence(latest_op->instance.op->op)) {
-        expr->instance.op->lhs = root;
-        root = expr;
-        latest_op = expr;
-      } else {
-        arith_expression_t *tmp = latest_op->instance.op->rhs;
-        latest_op->instance.op->rhs = expr;
-        expr->instance.op->lhs = tmp;
-        latest_op = expr;
-      }
-    } else {
-      if (latest_op->type == ARITH_OP && latest_op->instance.op->rhs == NULL) {
-        latest_op->instance.op->rhs = expr;
-      } else {
-        fatal_token("expected end of arithmetic expression", index - 1);
-        exit(EXIT_FAILURE);
-      }
-    }
-    next();
-  }
-  if (root == NULL) {
-    fatal_token("expected expression", index - 1);
-    exit(EXIT_FAILURE);
-  }
-  return root;
+  return parse_arith_expression_bp(0);
 }
 
 expression_t *parse_expression() {

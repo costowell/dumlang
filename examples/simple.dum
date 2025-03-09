@@ -1,3 +1,7 @@
 int dumlang() {
-    return 10 * (5 + 4) * 2;
+    return 3 * 4 - 6 + 4 * 5;
+}
+
+int dumlangb() {
+    return 1 + 3 * 4 * 5 - 5;
 }
