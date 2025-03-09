@@ -134,7 +134,15 @@ arith_expression_t *parse_arith_atom() {
 
 // Pratt parsing!
 arith_expression_t *parse_arith_expression_bp(uint8_t min_prec) {
-  arith_expression_t *lhs = parse_arith_atom();
+  arith_expression_t *lhs;
+  if (peek_next_type(TOKEN_PAREN_LEFT) != NULL) {
+    next();
+    lhs = parse_arith_expression_bp(0);
+    // current token should be a right paren, so advance to the next thing
+    next();
+  } else {
+    lhs = parse_arith_atom();
+  }
 
   while (true) {
     arith_operator_t oprtr;
