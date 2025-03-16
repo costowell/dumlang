@@ -25,7 +25,13 @@ size_t text_len;
 char strtab[STRTAB_SIZE];
 size_t strtab_len;
 
-bool regtab[NUM_REGISTERS] = {[RSP] = true, [RBP] = true, 0};
+// clang-format off
+bool regtab[NUM_REGISTERS] = {
+    [RSP] = true, [RBP] = true, // Obviously
+    [RAX] = true, [RDX] = true, // For division :( TODO: find a better way to do this
+    0
+};
+// clang-format on
 
 /* Utils */
 
@@ -108,7 +114,7 @@ void push(reg_t reg) {
   emit();
 }
 
-void mov_regs(reg_t dst, reg_t src) {
+void mov_reg_to_reg(reg_t dst, reg_t src) {
   REXBR(src, dst, REX_W);
   instr_set_opcode(MOV_R_RM);
   instr_set_mod(MOD_REG);
@@ -117,7 +123,7 @@ void mov_regs(reg_t dst, reg_t src) {
   emit();
 }
 
-void mov_imm64(reg_t reg, int64_t imm) {
+void mov_imm64_to_reg(reg_t reg, int64_t imm) {
   REXB(reg, REX_W);
   instr_set_opcode_inc(MOV_R_IMM, reg_num(reg));
   instr_set_imm64((uint64_t)imm);
@@ -181,6 +187,15 @@ void imul_reg_to_reg(reg_t dst, reg_t src) {
   emit();
 }
 
+void div_reg_to_reg(reg_t quotient) {
+  REXB(quotient, REX_W);
+  instr_set_opcode(DIV_RM);
+  instr_set_mod(MOD_REG);
+  instr_set_rm(quotient);
+  instr_set_reg(6);
+  emit();
+}
+
 void ret() {
   instr_set_opcode(RET_NEAR);
   emit();
@@ -197,7 +212,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
   }
   if (expr->type == ARITH_NUM) {
     reg_t r = next_reg();
-    mov_imm64(r, expr->instance.int64);
+    mov_imm64_to_reg(r, expr->instance.int64);
     return r;
   } else if (expr->type == ARITH_IDENT) {
     const scope_var_t *scope_var = scope_get(scope, expr->instance.name);
@@ -223,6 +238,12 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
     case OP_SUB:
       sub_reg_to_reg(lhsr, rhsr);
       break;
+    case OP_DIV:
+      mov_imm64_to_reg(RDX, 0);
+      mov_reg_to_reg(RAX, lhsr);
+      div_reg_to_reg(rhsr);
+      mov_reg_to_reg(lhsr, RAX);
+      break;
     }
     return lhsr;
   } else {
@@ -233,7 +254,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
 void evaluate_arith_expression(arith_expression_t *expr, reg_t result,
                                scope_t *scope) {
   reg_t r = _evaluate_arith_expression(expr, scope);
-  mov_regs(result, r);
+  mov_reg_to_reg(result, r);
 }
 
 void evaluate_expression(expression_t *expr, reg_t result, scope_t *scope) {
@@ -257,7 +278,7 @@ void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
 
 void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
   evaluate_expression(stmt->expr, RAX, scope);
-  mov_regs(RSP, RBP);
+  mov_reg_to_reg(RSP, RBP);
   pop(RBP);
   ret();
 }
@@ -314,7 +335,7 @@ void write_func(function_t *func) {
 
   // Setup stack
   push(RBP);
-  mov_regs(RBP, RSP);
+  mov_reg_to_reg(RBP, RSP);
   sub_imm32(RSP, (int32_t)stack_size);
 
   // Init scope
