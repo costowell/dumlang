@@ -1,7 +1,7 @@
-int dumlang() {
-    return 1 * 2 + 3 * 4;
+int dumlangdivide(int dividend, int divisor) {
+    return dividend / divisor;
 }
 
-int dumlangb() {
+int dumlang() {
     return 1 * (2 + 3) * 4;
 }

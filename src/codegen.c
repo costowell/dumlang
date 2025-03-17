@@ -8,6 +8,7 @@
 #include <err.h>
 #include <libelf.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +33,8 @@ bool regtab[NUM_REGISTERS] = {
     0
 };
 // clang-format on
+
+reg_t param_regs[6] = {RDI, RSI, RDX, RCX, R8, R9};
 
 /* Utils */
 
@@ -143,7 +146,7 @@ void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
 void mov_reg_to_mem_offset(reg_t src, reg_t dst_base, int32_t displacement) {
   REXBR(dst_base, src, REX_W);
   instr_set_opcode(MOV_R_RM);
-  instr_set_mod(MOD_DISP_1); // Four byte signed displacement
+  instr_set_mod(MOD_DISP_4); // Four byte signed displacement
   instr_set_rm(dst_base);
   instr_set_reg(src);
   instr_set_disp32((uint32_t)displacement);
@@ -268,7 +271,7 @@ void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
   if (scope_get(scope, stmt->name) != NULL)
     errx(EXIT_FAILURE, "error: '%s' already declared", stmt->name);
 
-  // Size is by default 4 since INT is the only type
+  // Size is by default 8 since INT is the only type
   const scope_var_t *scope_var = scope_insert(scope, stmt->name, 8);
   added_vars[(*added_vars_size)++] = stmt->name;
 
@@ -331,22 +334,37 @@ void write_func(function_t *func) {
       .st_value = text_len,
   };
 
-  uint32_t stack_size = calc_stack_size(func->code_block);
-
-  // Setup stack
-  push(RBP);
-  mov_reg_to_reg(RBP, RSP);
-  sub_imm32(RSP, (int32_t)stack_size);
-
   // Init scope
   scope_t *scope = scope_init();
+  uint32_t stack_size = calc_stack_size(func->code_block);
+
+  // Setup base pointer
+  push(RBP);
+  mov_reg_to_reg(RBP, RSP);
+
+  // Init parameters
+  for (int i = 0; i < MAX_FUNC_ARGS; ++i) {
+    if (func->args[i] == NULL)
+      break;
+    char *arg_name = func->args[i]->name;
+    // Size is by default 8 since INT is the only type
+    const scope_var_t *var = scope_insert(scope, arg_name, 8);
+    if (var == NULL) {
+      errx(EXIT_FAILURE, "error: argument already named '%s'", arg_name);
+    }
+    mov_reg_to_mem_offset(param_regs[i], RBP, var->position);
+    stack_size += var->size;
+  }
+
+  // Setup stack pointer
+  sub_imm32(RSP, (int32_t)stack_size);
 
   // Write code block
   write_codeblock(func->code_block, scope);
 
   // Tear down stack
-  if (stack_size > 0) {
-  }
+  mov_reg_to_reg(RSP, RBP);
+  pop(RBP);
 
   // Add to strtab
   append_strtab(func->name);

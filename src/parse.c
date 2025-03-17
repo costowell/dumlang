@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 static size_t index;
 static token_array_t *arr;
 
@@ -282,6 +283,7 @@ function_t *parse_function() {
   type_t return_type;
   token_t *name;
   code_block_t *code_block;
+  arg_t **args = calloc(MAX_FUNC_ARGS, sizeof(arg_t *));
 
   // Get function properties
   return_type = parse_type();
@@ -291,7 +293,25 @@ function_t *parse_function() {
     exit(EXIT_FAILURE);
   }
   ASSERT_NEXT(TOKEN_PAREN_LEFT);
-  // TODO: parse args
+  for (int i = 0; i < MAX_FUNC_ARGS; ++i) {
+    if (peek_next_type(TOKEN_PAREN_RIGHT))
+      break;
+    type_t arg_type = parse_type();
+    token_t *arg_name = next_type(TOKEN_IDENTIFIER);
+
+    // If its a comma or a paren
+    token_t *p = peek();
+    if (p->type == TOKEN_COMMA) {
+      next();
+    } else if (p->type != TOKEN_PAREN_RIGHT) {
+      fatal_token_type(TOKEN_PAREN_RIGHT, index);
+      exit(EXIT_FAILURE);
+    }
+
+    args[i] = malloc(sizeof(arg_t));
+    args[i]->name = arg_name->value.str;
+    args[i]->type = arg_type;
+  }
   ASSERT_NEXT(TOKEN_PAREN_RIGHT);
   code_block = parse_code_block();
 
@@ -299,7 +319,7 @@ function_t *parse_function() {
   function_t *func = malloc(sizeof(function_t));
   func->return_type = return_type;
   func->name = name->value.str;
-  func->args = NULL;
+  func->args = args;
   func->code_block = code_block;
   return func;
 }

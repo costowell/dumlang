@@ -5,6 +5,8 @@
 
 #include <stdint.h>
 
+#define MAX_FUNC_ARGS 6
+
 typedef enum _type {
   TYPE_INT64,
 } type_t;
