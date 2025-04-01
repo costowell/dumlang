@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 static size_t index;
 static token_array_t *arr;
 

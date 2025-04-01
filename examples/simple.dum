@@ -2,6 +2,17 @@ int dumlangdivide(int dividend, int divisor) {
     return dividend / divisor;
 }
 
+int testa() {
+    return 1;
+}
+
+int test() {
+    testa();
+    int a = 10;
+    return a;
+}
+
 int dumlang() {
-    return 1 * (2 + 3) * 4;
+    test();
+    return 1;
 }

@@ -204,6 +204,12 @@ void ret() {
   emit();
 }
 
+void call(int32_t disp) {
+  instr_set_opcode(CALL_REL32);
+  instr_set_disp32((uint32_t)disp);
+  emit();
+}
+
 /* Write Machine Instructions */
 
 reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
@@ -286,6 +292,30 @@ void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
   ret();
 }
 
+void write_call_statement(call_statement_t *stmt, scope_t *scope) {
+  // TODO: verify params match func arg type and count
+  // for (int i = 0; i < MAX_FUNC_ARGS; ++i) {
+  //  if (stmt->params[i] == NULL) {
+  //    break;
+  //  }
+  //  evaluate_expression(stmt->params[i], param_regs[i], scope);
+  //}
+  // TODO: maybe hashmap it up? gotta make sure there is order though
+  for (int i = 0; i < symtab_len; ++i) {
+    Elf64_Sym sym = symtab[i];
+    char *fn_name = strtab + sym.st_name;
+    if (strcmp(stmt->name, fn_name) == 0) {
+      // Subtract the function's position by our current position,
+      // then subtract the size of call() instr (5) since its relative to the
+      // next instr
+      int32_t disp = (int32_t)(sym.st_value - text_len) - 5;
+      call(disp);
+      return;
+    }
+  }
+  errx(EXIT_FAILURE, "no function named '%s'", stmt->name);
+}
+
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
                      uint8_t *added_vars_size) {
   switch (stmt->type) {
@@ -295,6 +325,9 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
     break;
   case STMT_RET:
     write_ret_statement(stmt->instance.ret, scope);
+    break;
+  case STMT_CALL:
+    write_call_statement(stmt->instance.call, scope);
     break;
   }
 }
@@ -361,10 +394,6 @@ void write_func(function_t *func) {
 
   // Write code block
   write_codeblock(func->code_block, scope);
-
-  // Tear down stack
-  mov_reg_to_reg(RSP, RBP);
-  pop(RBP);
 
   // Add to strtab
   append_strtab(func->name);

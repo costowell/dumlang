@@ -2,7 +2,7 @@
 
 scope_t *scope_init() {
   scope_t *scope = calloc(1, sizeof(scope_t));
-  scope->stacksize = 0;
+  scope->stacksize = 8; // By default 8 because we push rbp for every function
   if (hashmap_create(8, &scope->map) != 0)
     return NULL;
   return scope;
