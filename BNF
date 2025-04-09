@@ -1,19 +1,34 @@
-<toplevel>    ::= <function>*
-<function>    ::= <type> ' ' <identifier> '(' (<arg> (',' <arg>)*)? ')' <block>
-<arg>         ::= <type> ' ' <identifier>
-<block>       ::= '{' (<stmt> ';')* '}'
-<stmt>        ::= <declr-stmt> | <assign-stmt> | <call-stmt> | <ret-stmt>
-<ret-stmt>    ::= 'return' <expr>
-<call-stmt>   ::= <identifier> '(' (<expr> (',' <expr>)*)? ')'
-<declr-stmt>  ::= <type> ' ' <identifier> ('=' <expr>)?
-<assign-stmt> ::= <identifier> '=' <expr>
-<expr>        ::= <arith-expr>
-<arith-expr>  ::= <arith-elm> (<arith-op> <arith-elm>)*
-<arith-elm>   ::= <num> | <identifier> | '(' <expr> ')'
-<arith-op>    ::= '+' | '-' | '*' | '/'
-<num>         ::= 32-bit int
-<identifier>  ::= a-z | A-Z
-<type>        ::= 'int'
+@func2(x: int, y: int, z: int) {
+    ret x / y * z + 56;
+}
+
+@func(a: int): int {
+    ret a;
+}
+
+@main(a: int, b: int): int {
+    dec a: int = 10;
+    dec b: int = func(a);
+    dec c: int = a * b;
+    b = b + c;
+    func2(a, b, c);
+    ret b;
+}
 
 
-One data type and one type of expression isn't too complicated, but will keep figuring out codegen more straight forward.
+<toplevel> ::= <function>*
+<function> ::= "@" <ident> "(" ( <vartype> ( "," <vartype> )* )? ")" ( ":" <type> )? <block>
+<vartype>  ::= <ident> ":" <type>
+<block>    ::= "{" ( <stmt> ";" )* "}"
+<stmt>     ::= <decstmt> | <asgnstmt> | <retstmt> | <expr>
+<retstmt>  ::= "ret " <expr>
+<decstmt>  ::= "dec " <vartype> "=" <expr>
+<asgnstmt> ::= <ident> "=" <expr>
+<expr>     ::= <addarith>
+<addarith> ::= <addarith> "+" <addarith> | <addarith> "-" <addarith> | <mularith>
+<mularith> ::= <mularith> "*" <mularith> | <mularith> "/" <mularith> | <term>
+<funccall> ::= <ident> "(" ( <ident> ( "," <ident> )* )? ")"
+<term>     ::= <ident> | <num> | <funccall>
+<type>     ::= "int"
+<num>      ::= [0-9]+
+<ident>    ::= [a-z] ([a-z] | [0-9] | "_")*
