@@ -1,31 +1,23 @@
 #include "lex.h"
 
-#include <stdbool.h>
-#include <stdio.h>
+#include <ctype.h>
+#include <err.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
-char *token_type_names[] = {[TOKEN_NONE] = "no token",
-                            [TOKEN_PAREN_LEFT] = "(",
-                            [TOKEN_PAREN_RIGHT] = ")",
-                            [TOKEN_BRACE_LEFT] = "{",
-                            [TOKEN_BRACE_RIGHT] = "}",
-                            [TOKEN_COMMA] = ",",
-                            [TOKEN_ENDLINE] = "END",
-                            [TOKEN_TYPE_INT] = "int_type",
-                            [TOKEN_OP_ADD] = "+",
-                            [TOKEN_OP_SUB] = "-",
-                            [TOKEN_OP_MUL] = "*",
-                            [TOKEN_OP_DIV] = "/",
-                            [TOKEN_OP_EQU] = "=",
-                            [TOKEN_CMP_EQU] = "==",
-                            [TOKEN_CMP_GTE] = ">=",
-                            [TOKEN_CMP_LTE] = "<=",
-                            [TOKEN_CMP_GT] = ">",
-                            [TOKEN_CMP_LT] = "<",
-                            [TOKEN_IDENTIFIER] = "identifier",
-                            [TOKEN_INT] = "int",
-                            [TOKEN_RETURN] = "return"};
+char *token_type_names[] = {
+    [TOKEN_NONE] = "no token", [TOKEN_AT] = "@",
+    [TOKEN_COMMA] = ",",       [TOKEN_COLON] = ":",
+    [TOKEN_PAREN_LEFT] = "(",  [TOKEN_PAREN_RIGHT] = ")",
+    [TOKEN_BRACE_LEFT] = "{",  [TOKEN_BRACE_RIGHT] = "}",
+    [TOKEN_OP_ADD] = "+",      [TOKEN_OP_SUB] = "-",
+    [TOKEN_OP_MUL] = "*",      [TOKEN_OP_DIV] = "/",
+    [TOKEN_OP_EQU] = "=",      [TOKEN_IDENTIFIER] = "identifier",
+    [TOKEN_INT] = "int",       [TOKEN_KW_RET] = "ret",
+    [TOKEN_KW_DEC] = "dec",    [TOKEN_TYPE_INT] = "int_type"};
+
+FILE *src_fd = NULL;
 
 token_array_t *array_init() {
   token_array_t *arr = malloc(sizeof(token_array_t));
@@ -76,119 +68,109 @@ void print_token(const token_t *token) {
   printf(")");
 }
 
-/// TODO: parse a little less messily
-/// Didn't want to 'cheat' and use regex, and this nightmare
-/// can definitely be improved even without it
-///
-/// 03/01/2025 - Oh god this is an awful lexer I'll fix it later
-token_array_t *parse_tokens(char *str, size_t size) {
-  token_array_t *arr = array_init();
+void set_source_file(FILE *fd) { src_fd = fd; }
 
-  for (size_t i = 0; i < size; ++i) {
-    size_t rem = size - i;
-    token_type_t type = TOKEN_NONE;
-    token_value_t value = {.none = NULL};
-
-    if (rem >= 4 && strncmp(str + i, "int ", 4) == 0) {
-      type = TOKEN_TYPE_INT;
-      i += 3;
-    } else if (rem >= 7 && strncmp(str + i, "return ", 7) == 0) {
-      type = TOKEN_RETURN;
-      i += 6;
-    } else if (is_valid_identifier(str[i])) {
-      type = TOKEN_IDENTIFIER;
-      size_t id_size = 0;
-      while (id_size <= rem && is_valid_identifier(str[i + id_size++])) {
-      }
-      value.str = calloc(id_size, sizeof(char));
-      strncpy(value.str, str + i, id_size - 1);
-      i += id_size - 2;
-    } else if (is_valid_number(str[i]) ||
-               (str[i] == '-' && str[i + 1] != ' ')) {
-      type = TOKEN_INT;
-      int num = 0;
-      int neg = 1;
-      if (str[i] == '-') {
-        neg = -1;
-        i++;
-      }
-      while (is_valid_number(str[i])) {
-        num *= 10;
-        num += str[i] - '0';
-        i++;
-      }
-      i--;
-      value.int64 = num * neg;
-    } else {
-      switch (str[i]) {
-      case ';':
-        type = TOKEN_ENDLINE;
-        break;
-      case '(':
-        type = TOKEN_PAREN_LEFT;
-        break;
-      case ')':
-        type = TOKEN_PAREN_RIGHT;
-        break;
-      case '{':
-        type = TOKEN_BRACE_LEFT;
-        break;
-      case '}':
-        type = TOKEN_BRACE_RIGHT;
-        break;
-      case ',':
-        type = TOKEN_COMMA;
-        break;
-      case '=':
-        if (str[i + 1] == '=')
-          type = TOKEN_CMP_EQU;
-        else
-          type = TOKEN_OP_EQU;
-        break;
-      case '>':
-        if (str[i + 1] == '=')
-          type = TOKEN_CMP_GTE;
-        else
-          type = TOKEN_CMP_GT;
-        break;
-      case '<':
-        if (str[i + 1] == '=')
-          type = TOKEN_CMP_LTE;
-        else
-          type = TOKEN_CMP_LT;
-        break;
-      case '+':
-        type = TOKEN_OP_ADD;
-        break;
-      case '-':
-        type = TOKEN_OP_SUB;
-        break;
-      case '*':
-        type = TOKEN_OP_MUL;
-        break;
-      case '/':
-        type = TOKEN_OP_DIV;
-        break;
-      case '\n':
-      case '\0':
-      case ' ':
-        break;
-      default:
-        fprintf(stderr, "Error: unrecognized char '%c'\n", str[i]);
-        exit(EXIT_FAILURE);
-        break;
-      }
-    }
-
-    if (type == TOKEN_NONE) {
-      continue;
-    }
-
-    token_t *token = malloc(sizeof(token_t));
-    token->type = type;
-    token->value = value;
-    array_push(arr, token);
+#define MATCHES(TYPE, LITERAL)                                                 \
+  case TYPE: {                                                                 \
+    char content[sizeof(LITERAL)] = {0};                                       \
+    fread(content, sizeof(char), sizeof(LITERAL) - 1, src_fd);                 \
+    if (strncmp(content, LITERAL, sizeof(LITERAL) - 1) != 0) {                 \
+      fseek(src_fd, -((long)sizeof(LITERAL) - 1), SEEK_CUR);                   \
+      return false;                                                            \
+    }                                                                          \
+    break;                                                                     \
   }
 
-  return arr;
+void skip_whitespace() {
+  int c;
+  do {
+    c = fgetc(src_fd);
+    if (c == EOF)
+      errx(EXIT_FAILURE, "error: reached EOF");
+  } while (isspace(c));
+  ungetc(c, src_fd);
+}
+
+token_value_t *try_parse_token_value(token_type_t type) {
+  token_value_t *value = malloc(sizeof(token_value_t));
+  switch (type) {
+  case TOKEN_INT: {
+    char content[16] = {0};
+    char *endptr;
+
+    // Read 15 chars
+    fread(content, sizeof(char), sizeof(content) - 1, src_fd);
+
+    // Parse int
+    errno = 0;
+    long i = strtol(content, &endptr, 10);
+    if (i == 0 && (errno != 0 || endptr - content == 0))
+      return NULL;
+    value->int64 = i;
+
+    // Seek back to right after num
+    fseek(src_fd, (endptr - content) - (long)strlen(content), SEEK_CUR);
+    break;
+  }
+  case TOKEN_IDENTIFIER: {
+    char content[32] = {0};
+    unsigned int len;
+
+    // Read 15 chars
+    fread(content, sizeof(char), sizeof(content) - 1, src_fd);
+
+    // Find end of string
+    for (len = 0; len < sizeof(content); ++len) {
+      char c = content[len];
+      if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_')) {
+        break;
+      }
+    }
+    // If identifier parsed, set the value
+    if (len != 0) {
+      char *ident = calloc(len, sizeof(char));
+      strncpy(ident, content, len);
+      ident[len] = '\0';
+      value->str = ident;
+    }
+
+    // Seek back
+    fseek(src_fd, len - (long)strlen(content), SEEK_CUR);
+
+    // Return NULL if no identifier could be parsed
+    if (len == 0)
+      return NULL;
+    break;
+  }
+    default:
+      printf("error: unknown constant token type");
+      return NULL;
+  }
+  return value;
+}
+
+bool try_parse_token(token_type_t type) {
+  skip_whitespace();
+  switch (type) {
+    MATCHES(TOKEN_AT, "@");
+    MATCHES(TOKEN_COMMA, ",");
+    MATCHES(TOKEN_COLON, ":");
+    MATCHES(TOKEN_SEMICOLON, ";");
+    MATCHES(TOKEN_PAREN_LEFT, "(");
+    MATCHES(TOKEN_PAREN_RIGHT, ")");
+    MATCHES(TOKEN_BRACE_LEFT, "{");
+    MATCHES(TOKEN_BRACE_RIGHT, "}");
+    MATCHES(TOKEN_OP_ADD, "+");
+    MATCHES(TOKEN_OP_SUB, "-");
+    MATCHES(TOKEN_OP_MUL, "*");
+    MATCHES(TOKEN_OP_DIV, "/");
+    MATCHES(TOKEN_OP_EQU, "=");
+    MATCHES(TOKEN_KW_RET, "ret");
+    MATCHES(TOKEN_KW_DEC, "dec");
+    MATCHES(TOKEN_TYPE_INT, "int ");
+  default:
+    printf("error: unknown constant token type");
+    return false;
+  }
+  return true;
 }

@@ -221,7 +221,7 @@ declare_statement_t *parse_declare_statement() {
 }
 
 ret_statement_t *parse_ret_statement() {
-  ASSERT_NEXT(TOKEN_RETURN);
+  ASSERT_NEXT(TOKEN_KW_RET);
   expression_t *expr = parse_expression();
 
   ret_statement_t *stmt = malloc(sizeof(ret_statement_t));
@@ -234,7 +234,7 @@ statement_t *parse_statement() {
   if (peek_next_type(TOKEN_TYPE_INT) != NULL) {
     stmt->type = STMT_DECLARE;
     stmt->instance.declare = parse_declare_statement();
-  } else if (peek_next_type(TOKEN_RETURN) != NULL) {
+  } else if (peek_next_type(TOKEN_KW_RET) != NULL) {
     stmt->type = STMT_RET;
     stmt->instance.ret = parse_ret_statement();
   } else {
@@ -270,7 +270,7 @@ code_block_t *parse_code_block() {
     if (peek_next_type(TOKEN_BRACE_RIGHT) != NULL)
       break;
     statements[i] = parse_statement();
-    ASSERT_NEXT(TOKEN_ENDLINE);
+    ASSERT_NEXT(TOKEN_SEMICOLON);
   }
   index++; // Increment because of successful peek
   code_block_t *code_block = malloc(sizeof(code_block_t));

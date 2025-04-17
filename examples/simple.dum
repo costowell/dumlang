@@ -1,18 +1,1 @@
-int dumlangdivide(int dividend, int divisor) {
-    return dividend / divisor;
-}
-
-int testa() {
-    return 1;
-}
-
-int test() {
-    testa();
-    int a = 10;
-    return a;
-}
-
-int dumlang() {
-    test();
-    return 1;
-}
+testing_big_name()
