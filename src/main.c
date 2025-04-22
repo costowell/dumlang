@@ -22,27 +22,6 @@ int main(int argc, char **argv) {
   }
 
   set_source_file(fd);
-  token_value_t *val = try_parse_token_value(TOKEN_IDENTIFIER);
-  if (val) {
-    printf("%s\n", val->str);
-  } else {
-    printf("1 :(\n");
-  }
-  token_value_t *val2 = try_parse_token_value(TOKEN_IDENTIFIER);
-  if (val2) {
-    printf("%s\n", val2->str);
-  } else {
-    printf("2 :(\n");
-  }
-  if (try_parse_token(TOKEN_PAREN_LEFT)) {
-    printf("1 Successfully parsed!\n");
-  }
-  if (try_parse_token(TOKEN_PAREN_LEFT)) {
-    printf("2 Successfully parsed!\n");
-  }
-  if (try_parse_token(TOKEN_PAREN_RIGHT)) {
-    printf("3 Successfully parsed!\n");
-  }
   /* // Read 1K */
   /* char *program_contents = malloc(sizeof(char) * 1024); */
   /* fread(program_contents, sizeof(char), 1024, fd); */
@@ -59,22 +38,31 @@ int main(int argc, char **argv) {
   /* } */
   /* printf("\n"); */
 
-  /* char *tmp, *name = strtok(argv[1], "/"); */
-  /* while (name != NULL) { */
-  /*   if ((tmp = strtok(NULL, "/")) == NULL) { */
-  /*     name = strtok(name, "."); */
-  /*     break; */
-  /*   } */
-  /*   name = tmp; */
-  /* } */
+  char *tmp, *name = strtok(argv[1], "/");
+  while (name != NULL) {
+    if ((tmp = strtok(NULL, "/")) == NULL) {
+      name = strtok(name, ".");
+      break;
+    }
+    name = tmp;
+  }
 
-  /* char *object_name = calloc(strlen(name) + 3, sizeof(char)); */
-  /* strcpy(object_name, name); */
-  /* strcat(object_name, ".o"); */
+  char *object_name = calloc(strlen(name) + 3, sizeof(char));
+  strcpy(object_name, name);
+  strcat(object_name, ".o");
 
-  /* function_t **funcs = parse_ast(tokens); */
+  function_t **funcs = try_parse_ast();
+  for (; *funcs != NULL; funcs++) {
+    printf("%s: (", (*funcs)->name);
+    vartype_t **args = (*funcs)->args;
+    for (; *args != NULL; args++) {
+      printf("%s,", (*args)->name);
+    }
+    printf(")\n");
+  }
 
-  /* gen_object(funcs, object_name); */
+  return EXIT_SUCCESS;
+  gen_object(funcs, object_name);
 
   return EXIT_SUCCESS;
 }

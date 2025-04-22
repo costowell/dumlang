@@ -1,1 +1,2 @@
-testing_big_name()
+@testing_big_name()
+@smol(test: int, thing: int, lol: int)

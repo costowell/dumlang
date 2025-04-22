@@ -8,13 +8,14 @@
 #define MAX_FUNC_ARGS 6
 
 typedef enum _type {
+  TYPE_NONE,
   TYPE_INT64,
 } type_t;
 
-typedef struct _arg {
+typedef struct _vartype {
   type_t type;
   char *name;
-} arg_t;
+} vartype_t;
 
 typedef enum _expression_type { EXPR_ARITH } expression_type_t;
 
@@ -102,11 +103,11 @@ typedef struct _code_block {
 
 typedef struct _function {
   type_t return_type;
-  arg_t **args;
+  vartype_t **args;
   char *name;
   code_block_t *code_block;
 } function_t;
 
-function_t **parse_ast(token_array_t *);
+function_t **try_parse_ast();
 
 #endif // __PARSE_H
