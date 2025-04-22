@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,7 +16,8 @@ char *token_type_names[] = {
     [TOKEN_OP_MUL] = "*",      [TOKEN_OP_DIV] = "/",
     [TOKEN_OP_EQU] = "=",      [TOKEN_IDENTIFIER] = "identifier",
     [TOKEN_INT] = "int",       [TOKEN_KW_RET] = "ret",
-    [TOKEN_KW_DEC] = "dec",    [TOKEN_TYPE_INT] = "int_type"};
+    [TOKEN_KW_DEC] = "dec",    [TOKEN_TYPE_INT] = "int_type",
+    [TOKEN_EOF] = "EOF"};
 
 FILE *src_fd = NULL;
 
@@ -68,6 +70,8 @@ void print_token(const token_t *token) {
   printf(")");
 }
 
+long lex_get_pos() { return ftell(src_fd); }
+int lex_set_pos(long pos) { return fseek(src_fd, pos, SEEK_SET); }
 void set_source_file(FILE *fd) { src_fd = fd; }
 
 #define MATCHES(TYPE, LITERAL)                                                 \
@@ -81,17 +85,26 @@ void set_source_file(FILE *fd) { src_fd = fd; }
     break;                                                                     \
   }
 
+#define MATCHES_CHR(TYPE, CHR)                                                 \
+  case TYPE: {                                                                 \
+    int content = fgetc(src_fd);                                               \
+    if (content != CHR) {                                                      \
+      fseek(src_fd, -1, SEEK_CUR);                                             \
+      return false;                                                            \
+    }                                                                          \
+    break;                                                                     \
+  }
+
 void skip_whitespace() {
   int c;
   do {
     c = fgetc(src_fd);
-    if (c == EOF)
-      errx(EXIT_FAILURE, "error: reached EOF");
-  } while (isspace(c));
+  } while (isspace(c) && c != EOF);
   ungetc(c, src_fd);
 }
 
 token_value_t *try_parse_token_value(token_type_t type) {
+  skip_whitespace();
   token_value_t *value = malloc(sizeof(token_value_t));
   switch (type) {
   case TOKEN_INT: {
@@ -142,9 +155,9 @@ token_value_t *try_parse_token_value(token_type_t type) {
       return NULL;
     break;
   }
-    default:
-      printf("error: unknown constant token type");
-      return NULL;
+  default:
+    printf("error: unknown constant token type");
+    return NULL;
   }
   return value;
 }
@@ -152,22 +165,23 @@ token_value_t *try_parse_token_value(token_type_t type) {
 bool try_parse_token(token_type_t type) {
   skip_whitespace();
   switch (type) {
-    MATCHES(TOKEN_AT, "@");
-    MATCHES(TOKEN_COMMA, ",");
-    MATCHES(TOKEN_COLON, ":");
-    MATCHES(TOKEN_SEMICOLON, ";");
-    MATCHES(TOKEN_PAREN_LEFT, "(");
-    MATCHES(TOKEN_PAREN_RIGHT, ")");
-    MATCHES(TOKEN_BRACE_LEFT, "{");
-    MATCHES(TOKEN_BRACE_RIGHT, "}");
-    MATCHES(TOKEN_OP_ADD, "+");
-    MATCHES(TOKEN_OP_SUB, "-");
-    MATCHES(TOKEN_OP_MUL, "*");
-    MATCHES(TOKEN_OP_DIV, "/");
-    MATCHES(TOKEN_OP_EQU, "=");
+    MATCHES_CHR(TOKEN_EOF, EOF);
+    MATCHES_CHR(TOKEN_AT, '@');
+    MATCHES_CHR(TOKEN_COMMA, ',');
+    MATCHES_CHR(TOKEN_COLON, ':');
+    MATCHES_CHR(TOKEN_SEMICOLON, ';');
+    MATCHES_CHR(TOKEN_PAREN_LEFT, '(');
+    MATCHES_CHR(TOKEN_PAREN_RIGHT, ')');
+    MATCHES_CHR(TOKEN_BRACE_LEFT, '{');
+    MATCHES_CHR(TOKEN_BRACE_RIGHT, '}');
+    MATCHES_CHR(TOKEN_OP_ADD, '+');
+    MATCHES_CHR(TOKEN_OP_SUB, '-');
+    MATCHES_CHR(TOKEN_OP_MUL, '*');
+    MATCHES_CHR(TOKEN_OP_DIV, '/');
+    MATCHES_CHR(TOKEN_OP_EQU, '=');
     MATCHES(TOKEN_KW_RET, "ret");
     MATCHES(TOKEN_KW_DEC, "dec");
-    MATCHES(TOKEN_TYPE_INT, "int ");
+    MATCHES(TOKEN_TYPE_INT, "int");
   default:
     printf("error: unknown constant token type");
     return false;

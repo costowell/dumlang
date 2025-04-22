@@ -10,6 +10,7 @@ extern char *token_type_names[];
 
 typedef enum _token_type {
   TOKEN_NONE,
+  TOKEN_EOF,
   TOKEN_AT,
   TOKEN_COMMA,
   TOKEN_COLON,
@@ -46,6 +47,14 @@ typedef struct _token_array {
   size_t len;
 } token_array_t;
 
+typedef enum _try_error {
+  TRY_OK,
+  TRY_EOF,
+  TRY_FAIL,
+} try_error_t;
+
+long lex_get_pos();
+int lex_set_pos(long pos);
 void set_source_file(FILE *fd);
 bool try_parse_token(token_type_t type);
 token_value_t *try_parse_token_value(token_type_t type);
