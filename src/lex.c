@@ -30,34 +30,6 @@ char *token_type_names[] = {[TOKEN_NONE] = "no token",
 
 FILE *src_fd = NULL;
 
-token_array_t *array_init() {
-  token_array_t *arr = malloc(sizeof(token_array_t));
-  arr->alloc_len = 16;
-  arr->data = calloc(arr->alloc_len, sizeof(token_t *));
-  arr->len = 0;
-  return arr;
-}
-
-void array_resize(token_array_t *arr) {
-  arr->alloc_len = arr->alloc_len * 2;
-  arr->data = realloc(arr->data, arr->alloc_len * sizeof(token_t *));
-}
-
-void array_push(token_array_t *arr, token_t *token) {
-  if (arr->alloc_len == arr->len) {
-    array_resize(arr);
-  }
-  arr->data[arr->len++] = token;
-}
-
-token_t *array_get(token_array_t *arr, size_t index) {
-  if (index < arr->len) {
-    return arr->data[index];
-  } else {
-    return NULL;
-  }
-}
-
 bool is_valid_identifier(char c) {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
@@ -94,6 +66,22 @@ void set_source_file(FILE *fd) { src_fd = fd; }
     break;                                                                     \
   }
 
+// Similar to MATCHES, but fails if following char is identifier char
+// We can safely leave the preceding char unchecked because identifiers will
+// 'consume' the keyword and keywords will have already failed
+#define MATCHES_KW(TYPE, LITERAL)                                              \
+  case TYPE: {                                                                 \
+    char content[sizeof(LITERAL) + 1] = {0};                                   \
+    fread(content, sizeof(char), sizeof(LITERAL), src_fd);                     \
+    if (strncmp(content, LITERAL, sizeof(LITERAL) - 2) != 0 ||                 \
+        is_valid_ident_char(content[sizeof(LITERAL) - 1])) {                   \
+      fseek(src_fd, -((long)sizeof(LITERAL)), SEEK_CUR);                       \
+      return false;                                                            \
+    }                                                                          \
+    fseek(src_fd, -1, SEEK_CUR);                                               \
+    break;                                                                     \
+  }
+
 #define MATCHES_CHR(TYPE, CHR)                                                 \
   case TYPE: {                                                                 \
     int content = fgetc(src_fd);                                               \
@@ -103,6 +91,10 @@ void set_source_file(FILE *fd) { src_fd = fd; }
     }                                                                          \
     break;                                                                     \
   }
+
+bool is_valid_ident_char(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
 
 void skip_whitespace() {
   int c;
@@ -143,8 +135,7 @@ token_value_t *try_parse_token_value(token_type_t type) {
 
     // Find end of string
     for (len = 0; len < sizeof(content); ++len) {
-      char c = content[len];
-      if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_')) {
+      if (!is_valid_ident_char(content[len])) {
         break;
       }
     }
@@ -188,9 +179,9 @@ bool try_parse_token(token_type_t type) {
     MATCHES_CHR(TOKEN_OP_MUL, '*');
     MATCHES_CHR(TOKEN_OP_DIV, '/');
     MATCHES_CHR(TOKEN_OP_EQU, '=');
-    MATCHES(TOKEN_KW_RET, "ret ");
-    MATCHES(TOKEN_KW_DEC, "dec ");
-    MATCHES(TOKEN_TYPE_INT, "int");
+    MATCHES_KW(TOKEN_KW_RET, "ret");
+    MATCHES_KW(TOKEN_KW_DEC, "dec");
+    MATCHES_KW(TOKEN_TYPE_INT, "int");
   default:
     printf("error: unknown constant token type");
     return false;
