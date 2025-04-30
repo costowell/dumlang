@@ -280,7 +280,6 @@ statement_t *try_parse_statement() {
   } else if ((stmt->instance.assign = try_parse_assign_statement()) != NULL) {
     stmt->type = STMT_ASSIGN;
   } else {
-    snprintf(error_msg, sizeof(error_msg) - 1, "failed to parse statement");
     lex_set_pos(prevpos);
     return NULL;
   }
