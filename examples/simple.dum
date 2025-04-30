@@ -4,5 +4,6 @@
 
 @dumlang(param: int) {
     dec a: int = internal(param * 4 + 2);
+    a = a * 2;
     ret a;
 }

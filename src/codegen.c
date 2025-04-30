@@ -317,6 +317,15 @@ void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
   ret();
 }
 
+void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
+  const scope_var_t *scope_var;
+  if ((scope_var = scope_get(scope, stmt->lhs)) == NULL)
+    errx(EXIT_FAILURE, "error: no variable '%s'", stmt->lhs);
+
+  evaluate_expression(stmt->expr, RAX, scope);
+  mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
+}
+
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
                      uint8_t *added_vars_size) {
   switch (stmt->type) {
@@ -326,6 +335,9 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
     break;
   case STMT_RET:
     write_ret_statement(stmt->instance.ret, scope);
+    break;
+  case STMT_ASSIGN:
+    write_assign_statement(stmt->instance.assign, scope);
     break;
   }
 }
