@@ -52,16 +52,6 @@ int main(int argc, char **argv) {
   strcat(object_name, ".o");
 
   function_t **funcs = try_parse_ast();
-  for (; *funcs != NULL; funcs++) {
-    printf("%s: (", (*funcs)->name);
-    vartype_t **args = (*funcs)->args;
-    for (; *args != NULL; args++) {
-      printf("%s,", (*args)->name);
-    }
-    printf(")\n");
-  }
-
-  return EXIT_SUCCESS;
   gen_object(funcs, object_name);
 
   return EXIT_SUCCESS;

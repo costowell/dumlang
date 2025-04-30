@@ -212,6 +212,8 @@ void call(int32_t disp) {
 
 /* Write Machine Instructions */
 
+void evaluate_expression(expression_t *expr, reg_t result, scope_t *scope);
+
 reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
   // Arith expr parsing might not populate all nodes in the tree
   // because I'm bad at programming
@@ -255,6 +257,29 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
       break;
     }
     return lhsr;
+  } else if (expr->type == ARITH_FUNC_CALL) {
+    func_call_t *func = expr->instance.func_call;
+    // TODO: verify params match func arg type and count
+    for (int i = 0; i < MAX_FUNC_ARGS; ++i) {
+      if (func->args[i] == NULL) {
+        break;
+      }
+      evaluate_expression(func->args[i], param_regs[i], scope);
+    }
+    // TODO: maybe hashmap it up? gotta make sure there is order though
+    for (size_t i = 0; i < symtab_len; ++i) {
+      Elf64_Sym sym = symtab[i];
+      char *fn_name = strtab + sym.st_name;
+      if (strcmp(func->name, fn_name) == 0) {
+        // Subtract the function's position by our current position,
+        // then subtract the size of call() instr (5) since its relative to the
+        // next instr
+        int32_t disp = (int32_t)(sym.st_value - text_len) - 5;
+        call(disp);
+        return RAX;
+      }
+    }
+    errx(EXIT_FAILURE, "no function named '%s'", func->name);
   } else {
     errx(EXIT_FAILURE, "unknown expression type");
   }
@@ -292,30 +317,6 @@ void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
   ret();
 }
 
-void write_call_statement(call_statement_t *stmt, scope_t *scope) {
-  // TODO: verify params match func arg type and count
-  // for (int i = 0; i < MAX_FUNC_ARGS; ++i) {
-  //  if (stmt->params[i] == NULL) {
-  //    break;
-  //  }
-  //  evaluate_expression(stmt->params[i], param_regs[i], scope);
-  //}
-  // TODO: maybe hashmap it up? gotta make sure there is order though
-  for (int i = 0; i < symtab_len; ++i) {
-    Elf64_Sym sym = symtab[i];
-    char *fn_name = strtab + sym.st_name;
-    if (strcmp(stmt->name, fn_name) == 0) {
-      // Subtract the function's position by our current position,
-      // then subtract the size of call() instr (5) since its relative to the
-      // next instr
-      int32_t disp = (int32_t)(sym.st_value - text_len) - 5;
-      call(disp);
-      return;
-    }
-  }
-  errx(EXIT_FAILURE, "no function named '%s'", stmt->name);
-}
-
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
                      uint8_t *added_vars_size) {
   switch (stmt->type) {
@@ -325,9 +326,6 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
     break;
   case STMT_RET:
     write_ret_statement(stmt->instance.ret, scope);
-    break;
-  case STMT_CALL:
-    write_call_statement(stmt->instance.call, scope);
     break;
   }
 }

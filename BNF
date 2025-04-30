@@ -27,7 +27,7 @@
 <expr>     ::= <addarith>
 <addarith> ::= <addarith> "+" <addarith> | <addarith> "-" <addarith> | <mularith>
 <mularith> ::= <mularith> "*" <mularith> | <mularith> "/" <mularith> | <term>
-<funccall> ::= <ident> "(" ( <ident> ( "," <ident> )* )? ")"
+<funccall> ::= <ident> "(" ( <expr> ( "," <expr> )* )? ")"
 <term>     ::= <ident> | <num> | <funccall>
 <type>     ::= "int"
 <num>      ::= [0-9]+

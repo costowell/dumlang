@@ -1,10 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern int64_t dumlangdivide(uint64_t dividend, uint64_t divisor);
-extern int64_t dumlang();
+extern int64_t dumlang(uint64_t test);
 
-int main() {
-  printf("%ld\n", dumlangdivide(592835, 100));
-  printf("%ld\n", dumlang());
-}
+int main() { printf("%ld\n", dumlang(7)); }

@@ -7,17 +7,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-char *token_type_names[] = {
-    [TOKEN_NONE] = "no token", [TOKEN_AT] = "@",
-    [TOKEN_COMMA] = ",",       [TOKEN_COLON] = ":",
-    [TOKEN_PAREN_LEFT] = "(",  [TOKEN_PAREN_RIGHT] = ")",
-    [TOKEN_BRACE_LEFT] = "{",  [TOKEN_BRACE_RIGHT] = "}",
-    [TOKEN_OP_ADD] = "+",      [TOKEN_OP_SUB] = "-",
-    [TOKEN_OP_MUL] = "*",      [TOKEN_OP_DIV] = "/",
-    [TOKEN_OP_EQU] = "=",      [TOKEN_IDENTIFIER] = "identifier",
-    [TOKEN_INT] = "int",       [TOKEN_KW_RET] = "ret",
-    [TOKEN_KW_DEC] = "dec",    [TOKEN_TYPE_INT] = "int_type",
-    [TOKEN_EOF] = "EOF"};
+char *token_type_names[] = {[TOKEN_NONE] = "no token",
+                            [TOKEN_AT] = "@",
+                            [TOKEN_COMMA] = ",",
+                            [TOKEN_COLON] = ":",
+                            [TOKEN_SEMICOLON] = ";",
+                            [TOKEN_PAREN_LEFT] = "(",
+                            [TOKEN_PAREN_RIGHT] = ")",
+                            [TOKEN_BRACE_LEFT] = "{",
+                            [TOKEN_BRACE_RIGHT] = "}",
+                            [TOKEN_OP_ADD] = "+",
+                            [TOKEN_OP_SUB] = "-",
+                            [TOKEN_OP_MUL] = "*",
+                            [TOKEN_OP_DIV] = "/",
+                            [TOKEN_OP_EQU] = "=",
+                            [TOKEN_IDENTIFIER] = "identifier",
+                            [TOKEN_INT] = "int",
+                            [TOKEN_KW_RET] = "ret",
+                            [TOKEN_KW_DEC] = "dec",
+                            [TOKEN_TYPE_INT] = "int_type",
+                            [TOKEN_EOF] = "EOF"};
 
 FILE *src_fd = NULL;
 
@@ -179,8 +188,8 @@ bool try_parse_token(token_type_t type) {
     MATCHES_CHR(TOKEN_OP_MUL, '*');
     MATCHES_CHR(TOKEN_OP_DIV, '/');
     MATCHES_CHR(TOKEN_OP_EQU, '=');
-    MATCHES(TOKEN_KW_RET, "ret");
-    MATCHES(TOKEN_KW_DEC, "dec");
+    MATCHES(TOKEN_KW_RET, "ret ");
+    MATCHES(TOKEN_KW_DEC, "dec ");
     MATCHES(TOKEN_TYPE_INT, "int");
   default:
     printf("error: unknown constant token type");
