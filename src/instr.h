@@ -54,7 +54,9 @@ typedef enum _opcode : uint32_t {
   PUSH_R,
   POP_R,
   RET_NEAR,
-  CALL_REL32
+  CALL_REL32,
+  CMP_RM_IMM8,
+  JE_REL32
 } opcode_t;
 
 typedef enum _mod : uint8_t {
@@ -69,7 +71,7 @@ static const uint8_t opcode_enc_map[] = {
     [SUB_EAX_IMM] = 0x2D, [SUB_RM_IMM] = 0x81, [ADD_R_RM] = 0x03,
     [SUB_R_RM] = 0x2B,    [IMUL_R_RM] = 0xAF,  [PUSH_R] = 0x50,
     [POP_R] = 0x58,       [RET_NEAR] = 0xC3,   [DIV_RM] = 0xF7,
-    [CALL_REL32] = 0xE8};
+    [CALL_REL32] = 0xE8,  [CMP_RM_IMM8] = 0x83, [JE_REL32] = 0x84};
 
 static const opcode_type_t opcode_type_map[] = {
     [MOV_R_IMM] = SINGLE_BYTE,  [MOV_R_RM] = SINGLE_BYTE,
@@ -78,7 +80,7 @@ static const opcode_type_t opcode_type_map[] = {
     [IMUL_R_RM] = DOUBLE_BYTE,  [PUSH_R] = SINGLE_BYTE,
     [POP_R] = SINGLE_BYTE,      [RET_NEAR] = SINGLE_BYTE,
     [SUB_R_RM] = SINGLE_BYTE,   [DIV_RM] = SINGLE_BYTE,
-    [CALL_REL32] = SINGLE_BYTE};
+    [CALL_REL32] = SINGLE_BYTE, [CMP_RM_IMM8] = SINGLE_BYTE, [JE_REL32] = DOUBLE_BYTE};
 
 uint8_t instr_flush(uint8_t **buf);
 void instr_set_opcode(opcode_t opc);

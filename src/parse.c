@@ -29,6 +29,7 @@ char error_msg[128] = {0};
 #define ERRX(STATUS) errx(STATUS, "error: %s\n", error_msg)
 
 expression_t *try_parse_expression();
+code_block_t *try_parse_code_block();
 
 void gen_token_error(token_type_t type) {
   snprintf(error_msg, sizeof(error_msg) - 1,
@@ -210,6 +211,26 @@ fail:
   return NULL;
 }
 
+cond_statement_t *try_parse_cond_statement() {
+  long prevpos = lex_get_pos();
+  expression_t *cond;
+  code_block_t *code_block;
+
+  ASSERT_TOKEN(TOKEN_KW_IF);
+  if ((cond = try_parse_expression()) == NULL)
+    goto fail;
+  if ((code_block = try_parse_code_block()) == NULL)
+    goto fail;
+
+  cond_statement_t *stmt = malloc(sizeof(cond_statement_t));
+  stmt->code_block = code_block;
+  stmt->cond = cond;
+  return stmt;
+fail:
+  lex_set_pos(prevpos);
+  return NULL;
+}
+
 declare_statement_t *try_parse_dec_statement() {
   long prevpos = lex_get_pos();
   vartype_t *type;
@@ -279,6 +300,8 @@ statement_t *try_parse_statement() {
     stmt->type = STMT_RET;
   } else if ((stmt->instance.assign = try_parse_assign_statement()) != NULL) {
     stmt->type = STMT_ASSIGN;
+  } else if ((stmt->instance.cond = try_parse_cond_statement()) != NULL) {
+    stmt->type = STMT_COND;
   } else {
     lex_set_pos(prevpos);
     return NULL;

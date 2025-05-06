@@ -25,6 +25,7 @@ char *token_type_names[] = {[TOKEN_NONE] = "no token",
                             [TOKEN_INT] = "int",
                             [TOKEN_KW_RET] = "ret",
                             [TOKEN_KW_DEC] = "dec",
+                            [TOKEN_KW_IF] = "if",
                             [TOKEN_TYPE_INT] = "int_type",
                             [TOKEN_EOF] = "EOF"};
 
@@ -181,6 +182,7 @@ bool try_parse_token(token_type_t type) {
     MATCHES_CHR(TOKEN_OP_EQU, '=');
     MATCHES_KW(TOKEN_KW_RET, "ret");
     MATCHES_KW(TOKEN_KW_DEC, "dec");
+    MATCHES_KW(TOKEN_KW_IF, "if");
     MATCHES_KW(TOKEN_TYPE_INT, "int");
   default:
     printf("error: unknown constant token type");

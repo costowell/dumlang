@@ -20,9 +20,10 @@
 <function> ::= "@" <ident> "(" ( <vartype> ( "," <vartype> )* )? ")" ( ":" <type> )? <block>
 <vartype>  ::= <ident> ":" <type>
 <block>    ::= "{" ( <stmt> ";" )* "}"
-<stmt>     ::= <decstmt> | <asgnstmt> | <retstmt> | <expr>
-<retstmt>  ::= "ret " <expr>
-<decstmt>  ::= "dec " <vartype> "=" <expr>
+<stmt>     ::= <decstmt> | <asgnstmt> | <retstmt> | <ifstmt> | <expr>
+<ifstmt>   ::= "if" <expr> <block>
+<retstmt>  ::= "ret" <expr>
+<decstmt>  ::= "dec" <vartype> "=" <expr>
 <asgnstmt> ::= <ident> "=" <expr>
 <expr>     ::= <addarith>
 <addarith> ::= <addarith> "+" <addarith> | <addarith> "-" <addarith> | <mularith>

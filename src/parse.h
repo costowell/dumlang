@@ -39,6 +39,7 @@ typedef enum _arith_elm_type {
 
 typedef struct _arith_operation arith_operation_t;
 typedef struct _expression expression_t;
+typedef struct _code_block code_block_t;
 
 typedef struct _func_call {
   expression_t **args;
@@ -71,8 +72,14 @@ struct _expression {
 typedef enum _statement_type {
   STMT_DECLARE,
   STMT_ASSIGN,
-  STMT_RET
+  STMT_RET,
+  STMT_COND,
 } statement_type_t;
+
+typedef struct _if_statement {
+  expression_t *cond;
+  code_block_t *code_block;
+} cond_statement_t;
 
 typedef struct _declare_statement {
   type_t type;
@@ -96,12 +103,13 @@ typedef struct _statement {
     declare_statement_t *declare;
     ret_statement_t *ret;
     expression_t *expr;
+    cond_statement_t *cond;
   } instance;
 } statement_t;
 
-typedef struct _code_block {
+struct _code_block {
   statement_t **statements;
-} code_block_t;
+};
 
 typedef struct _function {
   type_t return_type;

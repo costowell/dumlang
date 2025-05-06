@@ -204,15 +204,32 @@ void ret() {
   emit();
 }
 
-void call(int32_t disp) {
+void call_rel32(int32_t disp) {
   instr_set_opcode(CALL_REL32);
   instr_set_disp32((uint32_t)disp);
+  emit();
+}
+
+void je_rel32(int32_t disp) {
+  instr_set_opcode(JE_REL32);
+  instr_set_disp32((uint32_t)disp);
+  emit();
+}
+
+void cmp_reg_imm8(reg_t reg, uint8_t imm) {
+  REXB(reg, REX_W);
+  instr_set_opcode(CMP_RM_IMM8);
+  instr_set_mod(MOD_REG);
+  instr_set_reg(7);
+  instr_set_rm(reg);
+  instr_set_imm8(imm);
   emit();
 }
 
 /* Write Machine Instructions */
 
 void evaluate_expression(expression_t *expr, reg_t result, scope_t *scope);
+void write_codeblock(code_block_t *block, scope_t *scope);
 
 reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
   // Arith expr parsing might not populate all nodes in the tree
@@ -275,7 +292,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
         // then subtract the size of call() instr (5) since its relative to the
         // next instr
         int32_t disp = (int32_t)(sym.st_value - text_len) - 5;
-        call(disp);
+        call_rel32(disp);
         return RAX;
       }
     }
@@ -326,6 +343,19 @@ void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
 }
 
+void write_cond_statement(cond_statement_t *stmt, scope_t *scope) {
+  evaluate_expression(stmt->cond, RAX, scope);
+  cmp_reg_imm8(RAX, 0);
+  size_t jepos = text_len;
+  je_rel32(0); // Insert placeholder instr
+  size_t afterjepos = text_len;
+  write_codeblock(stmt->code_block, scope);
+  size_t endpos = text_len;
+  text_len = jepos;
+  je_rel32((int32_t)(endpos - afterjepos));
+  text_len = endpos;
+}
+
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
                      uint8_t *added_vars_size) {
   switch (stmt->type) {
@@ -338,6 +368,9 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
     break;
   case STMT_ASSIGN:
     write_assign_statement(stmt->instance.assign, scope);
+    break;
+  case STMT_COND:
+    write_cond_statement(stmt->instance.cond, scope);
     break;
   }
 }
