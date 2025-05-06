@@ -1,10 +1,10 @@
 @internal(param: int) {
-    ret param * 2;
+    ret param * 2
 }
 
 @dumlang(param: int) {
     if param {
-        ret param * 2;
-    };
-    ret 10;
+        ret param * 2
+    }
+    ret 10
 }

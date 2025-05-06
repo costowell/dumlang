@@ -19,7 +19,7 @@
 <toplevel> ::= <function>*
 <function> ::= "@" <ident> "(" ( <vartype> ( "," <vartype> )* )? ")" ( ":" <type> )? <block>
 <vartype>  ::= <ident> ":" <type>
-<block>    ::= "{" ( <stmt> ";" )* "}"
+<block>    ::= "{" ( <stmt> )* "}"
 <stmt>     ::= <decstmt> | <asgnstmt> | <retstmt> | <ifstmt> | <expr>
 <ifstmt>   ::= "if" <expr> <block>
 <retstmt>  ::= "ret" <expr>

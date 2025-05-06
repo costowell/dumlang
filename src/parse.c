@@ -319,7 +319,6 @@ code_block_t *try_parse_code_block() {
     statement_t *stmt = try_parse_statement();
     if (stmt == NULL)
       goto fail;
-    ASSERT_TOKEN(TOKEN_SEMICOLON);
     stmts[i++] = stmt;
   }
 
