@@ -26,6 +26,7 @@ char *token_type_names[] = {[TOKEN_NONE] = "no token",
                             [TOKEN_KW_RET] = "ret",
                             [TOKEN_KW_DEC] = "dec",
                             [TOKEN_KW_IF] = "if",
+                            [TOKEN_KW_WHILE] = "while",
                             [TOKEN_TYPE_INT] = "int_type",
                             [TOKEN_EOF] = "EOF"};
 
@@ -106,6 +107,7 @@ void skip_whitespace() {
 }
 
 token_value_t *try_parse_token_value(token_type_t type) {
+  long prevpos = lex_get_pos();
   skip_whitespace();
   token_value_t *value = malloc(sizeof(token_value_t));
   switch (type) {
@@ -120,7 +122,7 @@ token_value_t *try_parse_token_value(token_type_t type) {
     errno = 0;
     long i = strtol(content, &endptr, 10);
     if (i == 0 && (errno != 0 || endptr - content == 0))
-      return NULL;
+      goto fail;
     value->int64 = i;
 
     // Seek back to right after num
@@ -140,27 +142,29 @@ token_value_t *try_parse_token_value(token_type_t type) {
         break;
       }
     }
+
+    if (len == 0)
+      goto fail;
+
     // If identifier parsed, set the value
-    if (len != 0) {
-      char *ident = calloc(len, sizeof(char));
-      strncpy(ident, content, len);
-      ident[len] = '\0';
-      value->str = ident;
-    }
+    char *ident = calloc(len, sizeof(char));
+    strncpy(ident, content, len);
+    ident[len] = '\0';
+    value->str = ident;
 
     // Seek back
     fseek(src_fd, len - (long)strlen(content), SEEK_CUR);
 
-    // Return NULL if no identifier could be parsed
-    if (len == 0)
-      return NULL;
     break;
   }
   default:
     printf("error: unknown constant token type");
-    return NULL;
+    goto fail;
   }
   return value;
+fail:
+  lex_set_pos(prevpos);
+  return NULL;
 }
 
 bool try_parse_token(token_type_t type) {
