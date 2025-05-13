@@ -74,7 +74,13 @@ typedef enum _statement_type {
   STMT_ASSIGN,
   STMT_RET,
   STMT_COND,
+  STMT_WHILE,
 } statement_type_t;
+
+typedef struct _while_statement {
+  expression_t *cond;
+  code_block_t *code_block;
+} while_statement_t;
 
 typedef struct _if_statement {
   expression_t *cond;
@@ -104,6 +110,7 @@ typedef struct _statement {
     ret_statement_t *ret;
     expression_t *expr;
     cond_statement_t *cond;
+    while_statement_t *while_loop;
   } instance;
 } statement_t;
 

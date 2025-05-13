@@ -29,6 +29,7 @@ typedef enum _token_type {
   TOKEN_KW_RET,
   TOKEN_KW_DEC,
   TOKEN_KW_IF,
+  TOKEN_KW_WHILE,
   TOKEN_TYPE_INT,
 } token_type_t;
 

@@ -211,6 +211,25 @@ fail:
   return NULL;
 }
 
+while_statement_t *try_parse_while_loop() {
+  long prevpos = lex_get_pos();
+  expression_t *cond;
+  code_block_t *code_block;
+
+  ASSERT_TOKEN(TOKEN_KW_WHILE);
+  if ((cond = try_parse_expression()) == NULL)
+    goto fail;
+  if ((code_block = try_parse_code_block()) == NULL)
+    goto fail;
+  while_statement_t *stmt = malloc(sizeof(while_statement_t));
+  stmt->code_block = code_block;
+  stmt->cond = cond;
+  return stmt;
+fail:
+  lex_set_pos(prevpos);
+  return NULL;
+}
+
 cond_statement_t *try_parse_cond_statement() {
   long prevpos = lex_get_pos();
   expression_t *cond;
@@ -302,6 +321,9 @@ statement_t *try_parse_statement() {
     stmt->type = STMT_ASSIGN;
   } else if ((stmt->instance.cond = try_parse_cond_statement()) != NULL) {
     stmt->type = STMT_COND;
+  } else if ((stmt->instance.while_loop = try_parse_while_loop()) !=
+             NULL) {
+    stmt->type = STMT_WHILE;
   } else {
     lex_set_pos(prevpos);
     return NULL;

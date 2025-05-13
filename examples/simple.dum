@@ -3,8 +3,10 @@
 }
 
 @dumlang(param: int) {
-    if param {
-        ret param * 2
+    dec num_digits: int = 0
+    while param {
+        param = param / 10
+        num_digits = num_digits + 1
     }
-    ret 10
+    ret num_digits
 }

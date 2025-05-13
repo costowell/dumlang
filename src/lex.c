@@ -183,6 +183,7 @@ bool try_parse_token(token_type_t type) {
     MATCHES_KW(TOKEN_KW_RET, "ret");
     MATCHES_KW(TOKEN_KW_DEC, "dec");
     MATCHES_KW(TOKEN_KW_IF, "if");
+    MATCHES_KW(TOKEN_KW_WHILE, "while");
     MATCHES_KW(TOKEN_TYPE_INT, "int");
   default:
     printf("error: unknown constant token type");

@@ -21,10 +21,12 @@
 <vartype>  ::= <ident> ":" <type>
 <block>    ::= "{" ( <stmt> )* "}"
 <stmt>     ::= <decstmt> | <asgnstmt> | <retstmt> | <ifstmt> | <expr>
-<ifstmt>   ::= "if" <expr> <block>
+<ifstmt>   ::= "if" <boolexpr> <block>
+<whlestmt> ::= "while" <boolexpr> <block>
 <retstmt>  ::= "ret" <expr>
 <decstmt>  ::= "dec" <vartype> "=" <expr>
 <asgnstmt> ::= <ident> "=" <expr>
+<boolexpr> ::= <boolexpr> "&&" <boolexpr> | <boolexpr> "||" <boolexpr> | <expr>
 <expr>     ::= <addarith>
 <addarith> ::= <addarith> "+" <addarith> | <addarith> "-" <addarith> | <mularith>
 <mularith> ::= <mularith> "*" <mularith> | <mularith> "/" <mularith> | <term>

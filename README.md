@@ -23,8 +23,9 @@ They will hopefully make their way into future blog posts!
 ## Things I still want to do
 - [ ] Control flow
     - [x] If statement
+    - [x] While loop
+    - [ ] Boolean expressions
     - [ ] For loop
-    - [ ] While loop
 - [ ] More integer data types (i32, u32, i8, u8, etc)
 - [ ] Pointers
 - [ ] Syscalls

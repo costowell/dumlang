@@ -216,6 +216,12 @@ void je_rel32(int32_t disp) {
   emit();
 }
 
+void j_rel32(int32_t disp) {
+  instr_set_opcode(J_REL32);
+  instr_set_disp32((uint32_t)disp);
+  emit();
+}
+
 void cmp_reg_imm8(reg_t reg, uint8_t imm) {
   REXB(reg, REX_W);
   instr_set_opcode(CMP_RM_IMM8);
@@ -350,6 +356,33 @@ void write_cond_statement(cond_statement_t *stmt, scope_t *scope) {
   je_rel32(0); // Insert placeholder instr
   size_t afterjepos = text_len;
   write_codeblock(stmt->code_block, scope);
+
+  size_t endpos = text_len;
+  text_len = jepos;
+  je_rel32((int32_t)(endpos - afterjepos));
+  text_len = endpos;
+}
+
+void write_while_statement(while_statement_t *stmt, scope_t *scope) {
+  size_t loop_top_pos = text_len;
+  evaluate_expression(stmt->cond, RAX, scope);
+  cmp_reg_imm8(RAX, 0);
+  size_t jepos = text_len;
+  je_rel32(0);
+  size_t afterjepos = text_len;
+  write_codeblock(stmt->code_block, scope);
+
+  // Need to know how long jump instruction is before knowing relative jump
+  // distance. Yes, it will always be 5, but 1) I like that there is no constant
+  // to correct and 2) I want to replace this text_len stuff with something
+  // better in the future
+  size_t jpos = text_len;
+  j_rel32(0);
+  size_t afterjpos = text_len;
+  text_len = jpos;
+  j_rel32((int32_t)(loop_top_pos - afterjpos));
+  text_len = afterjpos;
+
   size_t endpos = text_len;
   text_len = jepos;
   je_rel32((int32_t)(endpos - afterjepos));
@@ -371,6 +404,9 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
     break;
   case STMT_COND:
     write_cond_statement(stmt->instance.cond, scope);
+    break;
+  case STMT_WHILE:
+    write_while_statement(stmt->instance.while_loop, scope);
     break;
   }
 }
