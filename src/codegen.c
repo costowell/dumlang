@@ -134,7 +134,7 @@ void mov_imm64_to_reg(reg_t reg, int64_t imm) {
 }
 
 void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
-  REXBR(src_base, dst, REX_W);
+  REXBR(dst, src_base, REX_W);
   instr_set_opcode(MOV_RM_R);
   instr_set_mod(MOD_DISP_4); // Four byte signed displacement
   instr_set_rm(src_base);
