@@ -34,7 +34,8 @@ typedef enum _arith_elm_type {
   ARITH_NUM,
   ARITH_IDENT,
   ARITH_FUNC_CALL,
-  ARITH_OP
+  ARITH_OP,
+  ARITH_EXPR,
 } arith_elm_type_t;
 
 typedef struct _arith_operation arith_operation_t;
@@ -49,6 +50,7 @@ typedef struct _func_call {
 typedef struct _arith_expression {
   arith_elm_type_t type;
   union {
+    expression_t *expr;
     arith_operation_t *op;
     func_call_t *func_call;
     int64_t int64;

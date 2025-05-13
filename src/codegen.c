@@ -303,6 +303,10 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
       }
     }
     errx(EXIT_FAILURE, "no function named '%s'", func->name);
+  } else if (expr->type == ARITH_EXPR) {
+    reg_t reg = next_reg();
+    evaluate_expression(expr->instance.expr, reg, scope);
+    return reg;
   } else {
     errx(EXIT_FAILURE, "unknown expression type");
   }

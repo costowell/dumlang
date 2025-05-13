@@ -147,11 +147,22 @@ arith_expression_t *try_parse_arith_atom() {
   } else if ((value = try_parse_token_value(TOKEN_INT)) != NULL) {
     expr->instance.int64 = value->int64;
     expr->type = ARITH_NUM;
+  } else if (try_parse_token(TOKEN_PAREN_LEFT)) {
+    expression_t *subexpr;
+    if ((subexpr = try_parse_expression()) == NULL)
+      goto fail;
+    ASSERT_TOKEN(TOKEN_PAREN_RIGHT);
+
+    expr->instance.expr = subexpr;
+    expr->type = ARITH_EXPR;
   } else {
-    lex_set_pos(prevpos);
-    return NULL;
+    goto fail;
   }
   return expr;
+fail:
+  free(expr);
+  lex_set_pos(prevpos);
+  return NULL;
 }
 
 // Pratt parsing!
@@ -321,8 +332,7 @@ statement_t *try_parse_statement() {
     stmt->type = STMT_ASSIGN;
   } else if ((stmt->instance.cond = try_parse_cond_statement()) != NULL) {
     stmt->type = STMT_COND;
-  } else if ((stmt->instance.while_loop = try_parse_while_loop()) !=
-             NULL) {
+  } else if ((stmt->instance.while_loop = try_parse_while_loop()) != NULL) {
     stmt->type = STMT_WHILE;
   } else {
     lex_set_pos(prevpos);
