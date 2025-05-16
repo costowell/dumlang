@@ -155,6 +155,10 @@ void push(reg_t reg) {
 }
 
 void mov_reg_to_reg(reg_t dst, reg_t src) {
+  // Minor optimization
+  if (dst == src)
+    return;
+
   REXBR(src, dst, REX_W);
   instr_set_opcode(MOV_R_RM);
   instr_set_mod(MOD_REG);
