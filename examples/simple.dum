@@ -1,3 +1,6 @@
-@dumlang(param: int) {
-    ret 4 * (((1 + 1) * 2) / 3)
+@dumlang(a: int, b: int, c: int, d: int) {
+  if !(a < 5 || b > 5) && (c >= 10 || d <= 5) {
+    ret a + b + c + d
+  }
+  ret -1
 }

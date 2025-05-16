@@ -21,6 +21,14 @@ char *token_type_names[] = {[TOKEN_NONE] = "no token",
                             [TOKEN_OP_MUL] = "*",
                             [TOKEN_OP_DIV] = "/",
                             [TOKEN_OP_EQU] = "=",
+                            [TOKEN_LOG_AND] = "&&",
+                            [TOKEN_LOG_OR] = "||",
+                            [TOKEN_CMP_LT] = "<",
+                            [TOKEN_CMP_LTE] = "<=",
+                            [TOKEN_CMP_GT] = ">",
+                            [TOKEN_CMP_GTE] = ">=",
+                            [TOKEN_CMP_EQU] = "==",
+                            [TOKEN_CMP_NEQ] = "!=",
                             [TOKEN_IDENTIFIER] = "identifier",
                             [TOKEN_INT] = "int",
                             [TOKEN_KW_RET] = "ret",
@@ -158,7 +166,7 @@ token_value_t *try_parse_token_value(token_type_t type) {
     break;
   }
   default:
-    printf("error: unknown constant token type");
+    printf("error: unknown valued token type\n");
     goto fail;
   }
   return value;
@@ -184,13 +192,23 @@ bool try_parse_token(token_type_t type) {
     MATCHES_CHR(TOKEN_OP_MUL, '*');
     MATCHES_CHR(TOKEN_OP_DIV, '/');
     MATCHES_CHR(TOKEN_OP_EQU, '=');
+    MATCHES_CHR(TOKEN_CMP_GT, '>');
+    MATCHES_CHR(TOKEN_CMP_LT, '<');
+    MATCHES_CHR(TOKEN_LOG_NEG, '!');
+    MATCHES(TOKEN_CMP_GTE, ">=");
+    MATCHES(TOKEN_CMP_LTE, "<=");
+    MATCHES(TOKEN_CMP_EQU, "==");
+    MATCHES(TOKEN_CMP_NEQ, "!=");
+    MATCHES(TOKEN_LOG_AND, "&&");
+    MATCHES(TOKEN_LOG_OR, "||");
     MATCHES_KW(TOKEN_KW_RET, "ret");
     MATCHES_KW(TOKEN_KW_DEC, "dec");
     MATCHES_KW(TOKEN_KW_IF, "if");
     MATCHES_KW(TOKEN_KW_WHILE, "while");
     MATCHES_KW(TOKEN_TYPE_INT, "int");
   default:
-    printf("error: unknown constant token type");
+    printf("error: unknown constant token type: %s (%d)\n",
+           token_type_names[type], type);
     return false;
   }
   return true;

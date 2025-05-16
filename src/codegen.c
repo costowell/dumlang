@@ -17,6 +17,9 @@
 #define STRTAB_SIZE 256
 #define SYMTAB_SIZE 64
 
+#define UNCOND_JMP_SIZE 5
+#define COND_JMP_SIZE 6
+
 Elf64_Sym symtab[SYMTAB_SIZE];
 size_t symtab_len;
 
@@ -36,7 +39,41 @@ bool regtab[NUM_REGISTERS] = {
 
 reg_t param_regs[6] = {RDI, RSI, RDX, RCX, R8, R9};
 
+opcode_t cmptab[] = {
+    [CMP_OP_EQU] = JE_REL32, [CMP_OP_NEQ] = JNE_REL32,
+    [CMP_OP_LT] = JL_REL32,  [CMP_OP_GTE] = JGE_REL32,
+    [CMP_OP_GT] = JG_REL32,  [CMP_OP_LTE] = JLE_REL32,
+};
+
+jmp_t jmptab[64] = {0};
+size_t jmptab_len = 0;
+
 /* Utils */
+
+void write_jmp(opcode_t opc, int32_t dest);
+
+void append_jmptab(size_t loc, jmp_target_t target, opcode_t op) {
+  jmp_t jmp = {
+      .target = target,
+      .loc = loc,
+      .op = op,
+  };
+  jmptab[jmptab_len++] = jmp;
+}
+
+void eval_jmptab(jmp_target_t target, size_t value) {
+  size_t curpos = text_len;
+  for (size_t i = 0; i < jmptab_len; ++i) {
+    if (jmptab[i].target == target) {
+      text_len = jmptab[i].loc;
+      size_t size = COND_JMP_SIZE;
+      if (jmptab[i].op == J_REL32)
+        size = UNCOND_JMP_SIZE;
+      write_jmp(jmptab[i].op, (int32_t)(value - jmptab[i].loc - size));
+    }
+  }
+  text_len = curpos;
+}
 
 void append_strtab(char *str) {
   strcpy(strtab + strtab_len, str);
@@ -210,15 +247,9 @@ void call_rel32(int32_t disp) {
   emit();
 }
 
-void je_rel32(int32_t disp) {
-  instr_set_opcode(JE_REL32);
-  instr_set_disp32((uint32_t)disp);
-  emit();
-}
-
-void j_rel32(int32_t disp) {
-  instr_set_opcode(J_REL32);
-  instr_set_disp32((uint32_t)disp);
+void write_jmp(opcode_t opc, int32_t dest) {
+  instr_set_opcode(opc);
+  instr_set_disp32((uint32_t)dest);
   emit();
 }
 
@@ -232,10 +263,22 @@ void cmp_reg_imm8(reg_t reg, uint8_t imm) {
   emit();
 }
 
+void cmp_reg_to_reg(reg_t lhs, reg_t rhs) {
+  REXBR(rhs, lhs, REX_W);
+  instr_set_opcode(CMP_R_RM);
+  instr_set_mod(MOD_REG);
+  instr_set_reg(rhs);
+  instr_set_rm(lhs);
+  emit();
+}
+
 /* Write Machine Instructions */
 
-void evaluate_expression(expression_t *expr, reg_t result, scope_t *scope);
 void write_codeblock(code_block_t *block, scope_t *scope);
+void evaluate_expression_to_arith(expression_t *expr, reg_t result,
+                                  scope_t *scope);
+void evaluate_arith_expression(arith_expression_t *expr, reg_t result,
+                               scope_t *scope);
 
 reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
   // Arith expr parsing might not populate all nodes in the tree
@@ -263,16 +306,16 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
     regtab[rhsr] = false;
 
     switch (op->op) {
-    case OP_ADD:
+    case ARITH_OP_ADD:
       add_reg_to_reg(lhsr, rhsr);
       break;
-    case OP_MUL:
+    case ARITH_OP_MUL:
       imul_reg_to_reg(lhsr, rhsr);
       break;
-    case OP_SUB:
+    case ARITH_OP_SUB:
       sub_reg_to_reg(lhsr, rhsr);
       break;
-    case OP_DIV:
+    case ARITH_OP_DIV:
       mov_imm64_to_reg(RDX, 0);
       mov_reg_to_reg(RAX, lhsr);
       div_reg_to_reg(rhsr);
@@ -287,7 +330,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
       if (func->args[i] == NULL) {
         break;
       }
-      evaluate_expression(func->args[i], param_regs[i], scope);
+      evaluate_expression_to_arith(func->args[i], param_regs[i], scope);
     }
     // TODO: maybe hashmap it up? gotta make sure there is order though
     for (size_t i = 0; i < symtab_len; ++i) {
@@ -305,7 +348,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
     errx(EXIT_FAILURE, "no function named '%s'", func->name);
   } else if (expr->type == ARITH_EXPR) {
     reg_t reg = next_reg();
-    evaluate_expression(expr->instance.expr, reg, scope);
+    evaluate_arith_expression(expr->instance.expr, reg, scope);
     return reg;
   } else {
     errx(EXIT_FAILURE, "unknown expression type");
@@ -318,9 +361,70 @@ void evaluate_arith_expression(arith_expression_t *expr, reg_t result,
   mov_reg_to_reg(result, r);
 }
 
-void evaluate_expression(expression_t *expr, reg_t result, scope_t *scope) {
-  // We can assume all expressions are arith expressions
-  evaluate_arith_expression(expr->instance.arith, result, scope);
+void _evaluate_expression_to_cond(expression_t *expr, jmp_target_t cond_true,
+                                  jmp_target_t cond_false, unsigned int acc,
+                                  scope_t *scope) {
+  if (expr->type == EXPR_BOOL) {
+    bool_operation_t *opr = expr->instance.bop;
+    if (opr->op == BOOL_OP_AND) {
+      _evaluate_expression_to_cond(opr->lhs, LABEL_NEXT_COND + acc, cond_false,
+                                   acc * 2, scope);
+      size_t next_cond = text_len;
+      eval_jmptab(LABEL_NEXT_COND + acc, next_cond);
+      _evaluate_expression_to_cond(opr->rhs, cond_true, cond_false, acc * 2 + 1,
+                                   scope);
+    } else if (opr->op == BOOL_OP_OR) {
+      _evaluate_expression_to_cond(opr->lhs, cond_true, LABEL_NEXT_COND + acc,
+                                   acc * 2, scope);
+      size_t next_cond = text_len;
+      eval_jmptab(LABEL_NEXT_COND + acc, next_cond);
+      _evaluate_expression_to_cond(opr->rhs, cond_true, cond_false, acc * 2 + 1,
+                                   scope);
+    } else if (opr->op == BOOL_OP_NOT) {
+      _evaluate_expression_to_cond(opr->lhs, cond_false, cond_true, acc, scope);
+    } else {
+      errx(EXIT_FAILURE, "invalid boolean op");
+    }
+  } else if (expr->type == EXPR_CMP) {
+    cmp_operation_t *cmp = expr->instance.cmp;
+    opcode_t opc = cmptab[cmp->op];
+    evaluate_arith_expression(cmp->lhs, RAX, scope);
+    evaluate_arith_expression(cmp->rhs, RBX, scope);
+    cmp_reg_to_reg(RAX, RBX);
+    append_jmptab(text_len, cond_true, opc);
+    write_jmp(opc, cond_true); // Placeholder
+    append_jmptab(text_len, cond_false, J_REL32);
+    write_jmp(J_REL32, cond_false); // Placeholder
+  } else if (expr->type == EXPR_ARITH) {
+    arith_expression_t *arith = expr->instance.aexpr;
+    evaluate_arith_expression(arith, RAX, scope);
+    cmp_reg_imm8(RAX, 0);
+    append_jmptab(text_len, cond_true, JNE_REL32);
+    write_jmp(JNE_REL32, cond_true); // Placeholder
+    append_jmptab(text_len, cond_false, J_REL32);
+    write_jmp(J_REL32, cond_false); // Placeholder
+  } else if (expr->type == EXPR_EXPR) {
+    _evaluate_expression_to_cond(expr->instance.expr, cond_true, cond_false,
+                                 acc, scope);
+  }
+}
+
+void evaluate_expression_to_cond(expression_t *expr, code_block_t *block,
+                                 scope_t *scope) {
+  _evaluate_expression_to_cond(expr, LABEL_BLOCK_START, LABEL_BLOCK_END, 1,
+                               scope);
+  eval_jmptab(LABEL_BLOCK_START, text_len);
+  write_codeblock(block, scope);
+  eval_jmptab(LABEL_BLOCK_END, text_len);
+}
+
+void evaluate_expression_to_arith(expression_t *expr, reg_t result,
+                                  scope_t *scope) {
+  if (expr->type == EXPR_ARITH) {
+    evaluate_arith_expression(expr->instance.aexpr, result, scope);
+  } else {
+    printf("%d\n", expr->type);
+  }
 }
 
 void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
@@ -333,12 +437,12 @@ void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
   const scope_var_t *scope_var = scope_insert(scope, stmt->name, 8);
   added_vars[(*added_vars_size)++] = stmt->name;
 
-  evaluate_expression(stmt->expr, RAX, scope);
+  evaluate_expression_to_arith(stmt->expr, RAX, scope);
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
 }
 
 void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
-  evaluate_expression(stmt->expr, RAX, scope);
+  evaluate_expression_to_arith(stmt->expr, RAX, scope);
   mov_reg_to_reg(RSP, RBP);
   pop(RBP);
   ret();
@@ -349,30 +453,20 @@ void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
   if ((scope_var = scope_get(scope, stmt->lhs)) == NULL)
     errx(EXIT_FAILURE, "error: no variable '%s'", stmt->lhs);
 
-  evaluate_expression(stmt->expr, RAX, scope);
+  evaluate_expression_to_arith(stmt->expr, RAX, scope);
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
 }
 
 void write_cond_statement(cond_statement_t *stmt, scope_t *scope) {
-  evaluate_expression(stmt->cond, RAX, scope);
-  cmp_reg_imm8(RAX, 0);
-  size_t jepos = text_len;
-  je_rel32(0); // Insert placeholder instr
-  size_t afterjepos = text_len;
-  write_codeblock(stmt->code_block, scope);
-
-  size_t endpos = text_len;
-  text_len = jepos;
-  je_rel32((int32_t)(endpos - afterjepos));
-  text_len = endpos;
+  evaluate_expression_to_cond(stmt->cond, stmt->code_block, scope);
 }
 
 void write_while_statement(while_statement_t *stmt, scope_t *scope) {
   size_t loop_top_pos = text_len;
-  evaluate_expression(stmt->cond, RAX, scope);
+  evaluate_expression_to_arith(stmt->cond, RAX, scope);
   cmp_reg_imm8(RAX, 0);
   size_t jepos = text_len;
-  je_rel32(0);
+  write_jmp(JE_REL32, 0);
   size_t afterjepos = text_len;
   write_codeblock(stmt->code_block, scope);
 
@@ -381,15 +475,15 @@ void write_while_statement(while_statement_t *stmt, scope_t *scope) {
   // to correct and 2) I want to replace this text_len stuff with something
   // better in the future
   size_t jpos = text_len;
-  j_rel32(0);
+  write_jmp(J_REL32, 0);
   size_t afterjpos = text_len;
   text_len = jpos;
-  j_rel32((int32_t)(loop_top_pos - afterjpos));
+  write_jmp(J_REL32, (int32_t)(loop_top_pos - afterjpos));
   text_len = afterjpos;
 
   size_t endpos = text_len;
   text_len = jepos;
-  je_rel32((int32_t)(endpos - afterjepos));
+  write_jmp(JE_REL32, (int32_t)(endpos - afterjepos));
   text_len = endpos;
 }
 

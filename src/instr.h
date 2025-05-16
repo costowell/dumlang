@@ -56,7 +56,13 @@ typedef enum _opcode : uint32_t {
   RET_NEAR,
   CALL_REL32,
   CMP_RM_IMM8,
+  CMP_R_RM,
   JE_REL32,
+  JNE_REL32,
+  JG_REL32,
+  JGE_REL32,
+  JL_REL32,
+  JLE_REL32,
   J_REL32
 } opcode_t;
 
@@ -72,18 +78,33 @@ static const uint8_t opcode_enc_map[] = {
     [SUB_EAX_IMM] = 0x2D, [SUB_RM_IMM] = 0x81,  [ADD_R_RM] = 0x03,
     [SUB_R_RM] = 0x2B,    [IMUL_R_RM] = 0xAF,   [PUSH_R] = 0x50,
     [POP_R] = 0x58,       [RET_NEAR] = 0xC3,    [DIV_RM] = 0xF7,
-    [CALL_REL32] = 0xE8,  [CMP_RM_IMM8] = 0x83, [JE_REL32] = 0x84,
-    [J_REL32] = 0xE9};
+    [CALL_REL32] = 0xE8,  [CMP_RM_IMM8] = 0x83, [CMP_R_RM] = 0x39,
+    [JE_REL32] = 0x84,    [J_REL32] = 0xE9,     [JNE_REL32] = 0x85,
+    [JG_REL32] = 0x8F,    [JGE_REL32] = 0x8D,   [JL_REL32] = 0x8C,
+    [JLE_REL32] = 0x8E};
 
 static const opcode_type_t opcode_type_map[] = {
-    [MOV_R_IMM] = SINGLE_BYTE,  [MOV_R_RM] = SINGLE_BYTE,
-    [MOV_RM_R] = SINGLE_BYTE,   [SUB_EAX_IMM] = SINGLE_BYTE,
-    [SUB_RM_IMM] = SINGLE_BYTE, [ADD_R_RM] = SINGLE_BYTE,
-    [IMUL_R_RM] = DOUBLE_BYTE,  [PUSH_R] = SINGLE_BYTE,
-    [POP_R] = SINGLE_BYTE,      [RET_NEAR] = SINGLE_BYTE,
-    [SUB_R_RM] = SINGLE_BYTE,   [DIV_RM] = SINGLE_BYTE,
-    [CALL_REL32] = SINGLE_BYTE, [CMP_RM_IMM8] = SINGLE_BYTE,
-    [JE_REL32] = DOUBLE_BYTE, [J_REL32] = SINGLE_BYTE};
+    [MOV_R_IMM] = SINGLE_BYTE,
+    [MOV_R_RM] = SINGLE_BYTE,
+    [MOV_RM_R] = SINGLE_BYTE,
+    [SUB_EAX_IMM] = SINGLE_BYTE,
+    [SUB_RM_IMM] = SINGLE_BYTE,
+    [ADD_R_RM] = SINGLE_BYTE,
+    [IMUL_R_RM] = DOUBLE_BYTE,
+    [PUSH_R] = SINGLE_BYTE,
+    [POP_R] = SINGLE_BYTE,
+    [RET_NEAR] = SINGLE_BYTE,
+    [SUB_R_RM] = SINGLE_BYTE,
+    [DIV_RM] = SINGLE_BYTE,
+    [CALL_REL32] = SINGLE_BYTE,
+    [CMP_RM_IMM8] = SINGLE_BYTE,
+    [JE_REL32] = DOUBLE_BYTE,
+    [JNE_REL32] = DOUBLE_BYTE,
+    [JL_REL32] = DOUBLE_BYTE,
+    [JLE_REL32] = DOUBLE_BYTE,
+    [JG_REL32] = DOUBLE_BYTE,
+    [JGE_REL32] = DOUBLE_BYTE, [J_REL32] = SINGLE_BYTE,
+    [CMP_R_RM] = SINGLE_BYTE};
 
 uint8_t instr_flush(uint8_t **buf);
 void instr_set_opcode(opcode_t opc);

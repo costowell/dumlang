@@ -26,12 +26,13 @@
 <retstmt>  ::= "ret" <expr>
 <decstmt>  ::= "dec" <vartype> "=" <expr>
 <asgnstmt> ::= <ident> "=" <expr>
-<boolexpr> ::= <boolexpr> "&&" <boolexpr> | <boolexpr> "||" <boolexpr> | <expr>
+<boolexpr> ::= <boolexpr> <boolop> <boolexpr> | "!" <boolexpr> | <expr>
 <expr>     ::= <addarith>
 <addarith> ::= <addarith> "+" <addarith> | <addarith> "-" <addarith> | <mularith>
 <mularith> ::= <mularith> "*" <mularith> | <mularith> "/" <mularith> | <term>
 <funccall> ::= <ident> "(" ( <expr> ( "," <expr> )* )? ")"
 <term>     ::= <ident> | <num> | <funccall>
+<boolop>   ::= "&&" | "||"
 <type>     ::= "int"
 <num>      ::= [0-9]+
 <ident>    ::= [a-z] ([a-z] | [0-9] | "_")*

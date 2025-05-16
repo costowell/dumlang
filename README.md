@@ -26,6 +26,7 @@ They will hopefully make their way into future blog posts!
     - [x] While loop
     - [ ] Boolean expressions
     - [ ] For loop
+    - [ ] Break & continue
 - [ ] More integer data types (i32, u32, i8, u8, etc)
 - [ ] Pointers
 - [ ] Syscalls

@@ -17,18 +17,34 @@ typedef struct _vartype {
   char *name;
 } vartype_t;
 
-typedef enum _expression_type { EXPR_ARITH } expression_type_t;
+typedef enum _expression_type {
+  EXPR_ARITH,
+  EXPR_CMP,
+  EXPR_BOOL,
+  EXPR_EXPR
+} expression_type_t;
 
-// P
-// E
-// M D
-// A S
 typedef enum _arith_operator {
-  OP_ADD,
-  OP_SUB,
-  OP_MUL,
-  OP_DIV
+  ARITH_OP_ADD,
+  ARITH_OP_SUB,
+  ARITH_OP_MUL,
+  ARITH_OP_DIV
 } arith_operator_t;
+
+typedef enum _bool_operator {
+  BOOL_OP_AND,
+  BOOL_OP_OR,
+  BOOL_OP_NOT
+} bool_operator_t;
+
+typedef enum _cmp_operator {
+  CMP_OP_LT,
+  CMP_OP_GT,
+  CMP_OP_LTE,
+  CMP_OP_GTE,
+  CMP_OP_EQU,
+  CMP_OP_NEQ,
+} cmp_operator_t;
 
 typedef enum _arith_elm_type {
   ARITH_NUM,
@@ -39,24 +55,26 @@ typedef enum _arith_elm_type {
 } arith_elm_type_t;
 
 typedef struct _arith_operation arith_operation_t;
+typedef struct _bool_operation bool_operation_t;
 typedef struct _expression expression_t;
 typedef struct _code_block code_block_t;
+typedef struct _arith_expression arith_expression_t;
 
 typedef struct _func_call {
   expression_t **args;
   char *name;
 } func_call_t;
 
-typedef struct _arith_expression {
+struct _arith_expression {
   arith_elm_type_t type;
   union {
-    expression_t *expr;
+    arith_expression_t *expr;
     arith_operation_t *op;
     func_call_t *func_call;
     int64_t int64;
     char *name;
   } instance;
-} arith_expression_t;
+};
 
 struct _arith_operation {
   arith_operator_t op;
@@ -64,10 +82,25 @@ struct _arith_operation {
   arith_expression_t *rhs;
 };
 
+typedef struct _cmp_operation {
+  cmp_operator_t op;
+  arith_expression_t *lhs;
+  arith_expression_t *rhs;
+} cmp_operation_t;
+
+struct _bool_operation {
+  bool_operator_t op;
+  expression_t *lhs;
+  expression_t *rhs;
+};
+
 struct _expression {
   expression_type_t type;
   union {
-    arith_expression_t *arith;
+    expression_t *expr;
+    arith_expression_t *aexpr;
+    bool_operation_t *bop;
+    cmp_operation_t *cmp;
   } instance;
 };
 
