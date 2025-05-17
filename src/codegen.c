@@ -467,11 +467,9 @@ void write_cond_statement(cond_statement_t *stmt, scope_t *scope) {
 
 void write_while_statement(while_statement_t *stmt, scope_t *scope) {
   size_t loop_top_pos = text_len;
-  evaluate_expression_to_arith(stmt->cond, RAX, scope);
-  cmp_reg_imm8(RAX, 0);
-  size_t jepos = text_len;
-  write_jmp(JE_REL32, 0);
-  size_t afterjepos = text_len;
+  _evaluate_expression_to_cond(stmt->cond, LABEL_BLOCK_START, LABEL_BLOCK_END,
+                               1, scope);
+  eval_jmptab(LABEL_BLOCK_START, text_len);
   write_codeblock(stmt->code_block, scope);
 
   // Need to know how long jump instruction is before knowing relative jump
@@ -485,10 +483,7 @@ void write_while_statement(while_statement_t *stmt, scope_t *scope) {
   write_jmp(J_REL32, (int32_t)(loop_top_pos - afterjpos));
   text_len = afterjpos;
 
-  size_t endpos = text_len;
-  text_len = jepos;
-  write_jmp(JE_REL32, (int32_t)(endpos - afterjepos));
-  text_len = endpos;
+  eval_jmptab(LABEL_BLOCK_END, text_len);
 }
 
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,

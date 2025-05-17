@@ -24,7 +24,7 @@ They will hopefully make their way into future blog posts!
 - [ ] Control flow
     - [x] If statement
     - [x] While loop
-    - [ ] Boolean expressions
+    - [x] Boolean expressions
     - [ ] For loop
     - [ ] Break & continue
 - [ ] More integer data types (i32, u32, i8, u8, etc)
