@@ -1,6 +1,7 @@
 #include "codegen.h"
 #include "hashmap.h"
 #include "instr.h"
+#include "jmp.h"
 #include "obj.h"
 #include "parse.h"
 #include "scope.h"
@@ -16,9 +17,6 @@
 #define TEXT_SIZE 1024
 #define STRTAB_SIZE 256
 #define SYMTAB_SIZE 64
-
-#define UNCOND_JMP_SIZE 5
-#define COND_JMP_SIZE 6
 
 Elf64_Sym symtab[SYMTAB_SIZE];
 size_t symtab_len;
@@ -45,35 +43,12 @@ opcode_t cmptab[] = {
     [CMP_OP_GT] = JG_REL32,  [CMP_OP_LTE] = JLE_REL32,
 };
 
-jmp_t jmptab[64] = {0};
-size_t jmptab_len = 0;
-
 /* Utils */
 
 void write_jmp(opcode_t opc, int32_t dest);
 
-void append_jmptab(size_t loc, jmp_target_t target, opcode_t op) {
-  jmp_t jmp = {
-      .target = target,
-      .loc = loc,
-      .op = op,
-  };
-  jmptab[jmptab_len++] = jmp;
-}
-
-void eval_jmptab(jmp_target_t target, size_t value) {
-  size_t curpos = text_len;
-  for (size_t i = 0; i < jmptab_len; ++i) {
-    if (jmptab[i].target == target) {
-      text_len = jmptab[i].loc;
-      size_t size = COND_JMP_SIZE;
-      if (jmptab[i].op == J_REL32)
-        size = UNCOND_JMP_SIZE;
-      write_jmp(jmptab[i].op, (int32_t)(value - jmptab[i].loc - size));
-    }
-  }
-  text_len = curpos;
-}
+void text_set_pos(size_t pos) { text_len = pos; }
+size_t text_get_pos() { return text_len; }
 
 void append_strtab(char *str) {
   strcpy(strtab + strtab_len, str);
@@ -344,7 +319,7 @@ reg_t _evaluate_arith_expression(arith_expression_t *expr, scope_t *scope) {
         // Subtract the function's position by our current position,
         // then subtract the size of call() instr (5) since its relative to the
         // next instr
-        int32_t disp = (int32_t)(sym.st_value - text_len) - 5;
+        int32_t disp = (int32_t)(sym.st_value - text_get_pos()) - 5;
         call_rel32(disp);
         return RAX;
       }
@@ -367,25 +342,26 @@ void evaluate_arith_expression(arith_expression_t *expr, reg_t result,
 
 void _evaluate_expression_to_cond(expression_t *expr, jmp_target_t cond_true,
                                   jmp_target_t cond_false, unsigned int acc,
-                                  scope_t *scope) {
+                                  jmptab_t *tab, scope_t *scope) {
   if (expr->type == EXPR_BOOL) {
     bool_operation_t *opr = expr->instance.bop;
     if (opr->op == BOOL_OP_AND) {
       _evaluate_expression_to_cond(opr->lhs, LABEL_NEXT_COND + acc, cond_false,
-                                   acc * 2, scope);
-      size_t next_cond = text_len;
-      eval_jmptab(LABEL_NEXT_COND + acc, next_cond);
+                                   acc * 2, tab, scope);
+      size_t next_cond = text_get_pos();
+      jmptab_eval(tab, LABEL_NEXT_COND + acc, next_cond);
       _evaluate_expression_to_cond(opr->rhs, cond_true, cond_false, acc * 2 + 1,
-                                   scope);
+                                   tab, scope);
     } else if (opr->op == BOOL_OP_OR) {
       _evaluate_expression_to_cond(opr->lhs, cond_true, LABEL_NEXT_COND + acc,
-                                   acc * 2, scope);
-      size_t next_cond = text_len;
-      eval_jmptab(LABEL_NEXT_COND + acc, next_cond);
+                                   acc * 2, tab, scope);
+      size_t next_cond = text_get_pos();
+      jmptab_eval(tab, LABEL_NEXT_COND + acc, next_cond);
       _evaluate_expression_to_cond(opr->rhs, cond_true, cond_false, acc * 2 + 1,
-                                   scope);
+                                   tab, scope);
     } else if (opr->op == BOOL_OP_NOT) {
-      _evaluate_expression_to_cond(opr->lhs, cond_false, cond_true, acc, scope);
+      _evaluate_expression_to_cond(opr->lhs, cond_false, cond_true, acc, tab,
+                                   scope);
     } else {
       errx(EXIT_FAILURE, "invalid boolean op");
     }
@@ -395,31 +371,28 @@ void _evaluate_expression_to_cond(expression_t *expr, jmp_target_t cond_true,
     evaluate_arith_expression(cmp->lhs, RAX, scope);
     evaluate_arith_expression(cmp->rhs, RBX, scope);
     cmp_reg_to_reg(RAX, RBX);
-    append_jmptab(text_len, cond_true, opc);
+    jmptab_insert(tab, text_get_pos(), cond_true, opc);
     write_jmp(opc, cond_true); // Placeholder
-    append_jmptab(text_len, cond_false, J_REL32);
+    jmptab_insert(tab, text_get_pos(), cond_false, J_REL32);
     write_jmp(J_REL32, cond_false); // Placeholder
   } else if (expr->type == EXPR_ARITH) {
     arith_expression_t *arith = expr->instance.aexpr;
     evaluate_arith_expression(arith, RAX, scope);
     cmp_reg_imm8(RAX, 0);
-    append_jmptab(text_len, cond_true, JNE_REL32);
+    jmptab_insert(tab, text_get_pos(), cond_true, JNE_REL32);
     write_jmp(JNE_REL32, cond_true); // Placeholder
-    append_jmptab(text_len, cond_false, J_REL32);
+    jmptab_insert(tab, text_get_pos(), cond_false, J_REL32);
     write_jmp(J_REL32, cond_false); // Placeholder
   } else if (expr->type == EXPR_EXPR) {
     _evaluate_expression_to_cond(expr->instance.expr, cond_true, cond_false,
-                                 acc, scope);
+                                 acc, tab, scope);
   }
 }
 
-void evaluate_expression_to_cond(expression_t *expr, code_block_t *block,
+void evaluate_expression_to_cond(expression_t *expr, jmp_target_t cond_true,
+                                 jmp_target_t cond_false, jmptab_t *tab,
                                  scope_t *scope) {
-  _evaluate_expression_to_cond(expr, LABEL_BLOCK_START, LABEL_BLOCK_END, 1,
-                               scope);
-  eval_jmptab(LABEL_BLOCK_START, text_len);
-  write_codeblock(block, scope);
-  eval_jmptab(LABEL_BLOCK_END, text_len);
+  _evaluate_expression_to_cond(expr, cond_true, cond_false, 1, tab, scope);
 }
 
 void evaluate_expression_to_arith(expression_t *expr, reg_t result,
@@ -462,28 +435,36 @@ void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
 }
 
 void write_cond_statement(cond_statement_t *stmt, scope_t *scope) {
-  evaluate_expression_to_cond(stmt->cond, stmt->code_block, scope);
+  jmptab_t *tab = jmptab_init();
+  evaluate_expression_to_cond(stmt->cond, LABEL_BLOCK_START, LABEL_BLOCK_END,
+                              tab, scope);
+  jmptab_eval(tab, LABEL_BLOCK_START, text_get_pos());
+  write_codeblock(stmt->code_block, scope);
+  jmptab_eval(tab, LABEL_BLOCK_END, text_get_pos());
+  jmptab_free(tab);
 }
 
 void write_while_statement(while_statement_t *stmt, scope_t *scope) {
-  size_t loop_top_pos = text_len;
-  _evaluate_expression_to_cond(stmt->cond, LABEL_BLOCK_START, LABEL_BLOCK_END,
-                               1, scope);
-  eval_jmptab(LABEL_BLOCK_START, text_len);
+  jmptab_t *tab = jmptab_init();
+  size_t loop_top_pos = text_get_pos();
+  evaluate_expression_to_cond(stmt->cond, LABEL_BLOCK_START, LABEL_BLOCK_END,
+                              tab, scope);
+  jmptab_eval(tab, LABEL_BLOCK_START, text_get_pos());
   write_codeblock(stmt->code_block, scope);
 
   // Need to know how long jump instruction is before knowing relative jump
   // distance. Yes, it will always be 5, but 1) I like that there is no constant
   // to correct and 2) I want to replace this text_len stuff with something
   // better in the future
-  size_t jpos = text_len;
+  size_t jpos = text_get_pos();
   write_jmp(J_REL32, 0);
-  size_t afterjpos = text_len;
-  text_len = jpos;
+  size_t afterjpos = text_get_pos();
+  text_set_pos(jpos);
   write_jmp(J_REL32, (int32_t)(loop_top_pos - afterjpos));
-  text_len = afterjpos;
+  text_set_pos(afterjpos);
 
-  eval_jmptab(LABEL_BLOCK_END, text_len);
+  jmptab_eval(tab, LABEL_BLOCK_END, text_get_pos());
+  jmptab_free(tab);
 }
 
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,

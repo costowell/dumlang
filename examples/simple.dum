@@ -1,6 +1,9 @@
 @dumlang(param: int) {
   dec i: int = 0
   while param > 3 && i <= 10 {
+    if param == 5 {
+      ret 69
+    }
     param = param - 1
     i = i + 1
   }
