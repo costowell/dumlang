@@ -14,6 +14,11 @@
     BYTEARR##_size = SIZE;                                                     \
   } while (0)
 
+char *reg_names[NUM_REGISTERS] = {
+    [RAX] = "RAX", [RCX] = "RCX", [RDX] = "RDX", [RBX] = "RBX", [RSP] = "RSP", [RBP] = "RBP",
+    [RSI] = "RSI", [RDI] = "RDI", [R8] = "R8",   [R9] = "R9",   [R10] = "R10",
+    [R11] = "R11", [R12] = "R12", [R13] = "R13", [R14] = "R14", [R15] = "R15"};
+
 uint8_t rex_prefix = 0;
 
 opcode_type_t opc_type;

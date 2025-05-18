@@ -26,6 +26,8 @@ typedef enum _reg : uint8_t {
   NUM_REGISTERS,
 } reg_t;
 
+extern char *reg_names[NUM_REGISTERS];
+
 typedef enum _rex_flags : uint8_t {
   REX_B = 1 << 0, // extension to the MODRM.rm field or the SIB.base field
   REX_X = 1 << 1, // extension to the SIB.index field
@@ -84,27 +86,17 @@ static const uint8_t opcode_enc_map[] = {
     [JLE_REL32] = 0x8E};
 
 static const opcode_type_t opcode_type_map[] = {
-    [MOV_R_IMM] = SINGLE_BYTE,
-    [MOV_R_RM] = SINGLE_BYTE,
-    [MOV_RM_R] = SINGLE_BYTE,
-    [SUB_EAX_IMM] = SINGLE_BYTE,
-    [SUB_RM_IMM] = SINGLE_BYTE,
-    [ADD_R_RM] = SINGLE_BYTE,
-    [IMUL_R_RM] = DOUBLE_BYTE,
-    [PUSH_R] = SINGLE_BYTE,
-    [POP_R] = SINGLE_BYTE,
-    [RET_NEAR] = SINGLE_BYTE,
-    [SUB_R_RM] = SINGLE_BYTE,
-    [DIV_RM] = SINGLE_BYTE,
-    [CALL_REL32] = SINGLE_BYTE,
-    [CMP_RM_IMM8] = SINGLE_BYTE,
-    [JE_REL32] = DOUBLE_BYTE,
-    [JNE_REL32] = DOUBLE_BYTE,
-    [JL_REL32] = DOUBLE_BYTE,
-    [JLE_REL32] = DOUBLE_BYTE,
-    [JG_REL32] = DOUBLE_BYTE,
-    [JGE_REL32] = DOUBLE_BYTE, [J_REL32] = SINGLE_BYTE,
-    [CMP_R_RM] = SINGLE_BYTE};
+    [MOV_R_IMM] = SINGLE_BYTE,  [MOV_R_RM] = SINGLE_BYTE,
+    [MOV_RM_R] = SINGLE_BYTE,   [SUB_EAX_IMM] = SINGLE_BYTE,
+    [SUB_RM_IMM] = SINGLE_BYTE, [ADD_R_RM] = SINGLE_BYTE,
+    [IMUL_R_RM] = DOUBLE_BYTE,  [PUSH_R] = SINGLE_BYTE,
+    [POP_R] = SINGLE_BYTE,      [RET_NEAR] = SINGLE_BYTE,
+    [SUB_R_RM] = SINGLE_BYTE,   [DIV_RM] = SINGLE_BYTE,
+    [CALL_REL32] = SINGLE_BYTE, [CMP_RM_IMM8] = SINGLE_BYTE,
+    [JE_REL32] = DOUBLE_BYTE,   [JNE_REL32] = DOUBLE_BYTE,
+    [JL_REL32] = DOUBLE_BYTE,   [JLE_REL32] = DOUBLE_BYTE,
+    [JG_REL32] = DOUBLE_BYTE,   [JGE_REL32] = DOUBLE_BYTE,
+    [J_REL32] = SINGLE_BYTE,    [CMP_R_RM] = SINGLE_BYTE};
 
 uint8_t instr_flush(uint8_t **buf);
 void instr_set_opcode(opcode_t opc);

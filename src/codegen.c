@@ -35,6 +35,7 @@ bool regtab[NUM_REGISTERS] = {
 };
 // clang-format on
 
+reg_t prsrv_regs[5] = {RBX, R12, R13, R14, R15};
 reg_t param_regs[6] = {RDI, RSI, RDX, RCX, R8, R9};
 
 opcode_t cmptab[] = {
@@ -160,7 +161,7 @@ void mov_mem_offset_to_reg(reg_t dst, reg_t src_base, int32_t displacement) {
 }
 
 void mov_reg_to_mem_offset(reg_t src, reg_t dst_base, int32_t displacement) {
-  REXBR(dst_base, src, REX_W);
+  REXBR(src, dst_base, REX_W);
   instr_set_opcode(MOV_R_RM);
   instr_set_mod(MOD_DISP_4); // Four byte signed displacement
   instr_set_rm(dst_base);
@@ -253,7 +254,8 @@ void cmp_reg_to_reg(reg_t lhs, reg_t rhs) {
 
 /* Write Machine Instructions */
 
-void write_codeblock(code_block_t *block, scope_t *scope);
+void write_codeblock(code_block_t *block, scope_t *scope,
+                     jmptab_t *superjmptab);
 void evaluate_expression_to_arith(expression_t *expr, reg_t result,
                                   scope_t *scope);
 void evaluate_arith_expression(arith_expression_t *expr, reg_t result,
@@ -418,11 +420,11 @@ void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
 }
 
-void write_ret_statement(ret_statement_t *stmt, scope_t *scope) {
+void write_ret_statement(ret_statement_t *stmt, scope_t *scope,
+                         jmptab_t *jmptab) {
   evaluate_expression_to_arith(stmt->expr, RAX, scope);
-  mov_reg_to_reg(RSP, RBP);
-  pop(RBP);
-  ret();
+  jmptab_insert(jmptab, text_get_pos(), LABEL_RET, J_REL32);
+  write_jmp(J_REL32, LABEL_RET);
 }
 
 void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
@@ -434,28 +436,31 @@ void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
 }
 
-void write_cond_statement(cond_statement_t *stmt, scope_t *scope) {
+void write_cond_statement(cond_statement_t *stmt, scope_t *scope,
+                          jmptab_t *superjmptab) {
   jmptab_t *tab = jmptab_init();
   evaluate_expression_to_cond(stmt->cond, LABEL_BLOCK_START, LABEL_BLOCK_END,
                               tab, scope);
   jmptab_eval(tab, LABEL_BLOCK_START, text_get_pos());
-  write_codeblock(stmt->code_block, scope);
+  // For specificly conditional statements, we don't need to pass in tab and
+  // merge since there aren't any keywords that will modify the flow in the
+  // block
+  write_codeblock(stmt->code_block, scope, superjmptab);
   jmptab_eval(tab, LABEL_BLOCK_END, text_get_pos());
   jmptab_free(tab);
 }
 
-void write_while_statement(while_statement_t *stmt, scope_t *scope) {
+void write_while_statement(while_statement_t *stmt, scope_t *scope,
+                           jmptab_t *superjmptab) {
   jmptab_t *tab = jmptab_init();
   size_t loop_top_pos = text_get_pos();
   evaluate_expression_to_cond(stmt->cond, LABEL_BLOCK_START, LABEL_BLOCK_END,
                               tab, scope);
-  jmptab_eval(tab, LABEL_BLOCK_START, text_get_pos());
-  write_codeblock(stmt->code_block, scope);
+  size_t blockpos = text_get_pos();
+  write_codeblock(stmt->code_block, scope, tab);
 
   // Need to know how long jump instruction is before knowing relative jump
-  // distance. Yes, it will always be 5, but 1) I like that there is no constant
-  // to correct and 2) I want to replace this text_len stuff with something
-  // better in the future
+  // distance
   size_t jpos = text_get_pos();
   write_jmp(J_REL32, 0);
   size_t afterjpos = text_get_pos();
@@ -463,38 +468,40 @@ void write_while_statement(while_statement_t *stmt, scope_t *scope) {
   write_jmp(J_REL32, (int32_t)(loop_top_pos - afterjpos));
   text_set_pos(afterjpos);
 
+  jmptab_eval(tab, LABEL_BLOCK_START, blockpos);
   jmptab_eval(tab, LABEL_BLOCK_END, text_get_pos());
+  jmptab_merge(superjmptab, tab);
   jmptab_free(tab);
 }
 
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
-                     uint8_t *added_vars_size) {
+                     uint8_t *added_vars_size, jmptab_t *jmptab) {
   switch (stmt->type) {
   case STMT_DECLARE:
     write_declare_statement(stmt->instance.declare, scope, added_vars,
                             added_vars_size);
     break;
   case STMT_RET:
-    write_ret_statement(stmt->instance.ret, scope);
+    write_ret_statement(stmt->instance.ret, scope, jmptab);
     break;
   case STMT_ASSIGN:
     write_assign_statement(stmt->instance.assign, scope);
     break;
   case STMT_COND:
-    write_cond_statement(stmt->instance.cond, scope);
+    write_cond_statement(stmt->instance.cond, scope, jmptab);
     break;
   case STMT_WHILE:
-    write_while_statement(stmt->instance.while_loop, scope);
+    write_while_statement(stmt->instance.while_loop, scope, jmptab);
     break;
   }
 }
 
-void write_codeblock(code_block_t *block, scope_t *scope) {
+void write_codeblock(code_block_t *block, scope_t *scope, jmptab_t *jmptab) {
   char *added_vars[8] = {0};
   uint8_t added_vars_size = 0;
   for (statement_t **stmts = block->statements; *stmts != NULL; ++stmts) {
     statement_t *stmt = *stmts;
-    write_statement(stmt, scope, added_vars, &added_vars_size);
+    write_statement(stmt, scope, added_vars, &added_vars_size, jmptab);
   }
   for (uint8_t i = 0; i < added_vars_size; ++i) {
     scope_remove(scope, added_vars[i]);
@@ -532,6 +539,23 @@ void write_func(function_t *func) {
   push(RBP);
   mov_reg_to_reg(RBP, RSP);
 
+  // Save preserved registers
+  for (unsigned int i = 0; i < sizeof(prsrv_regs) / sizeof(reg_t); ++i) {
+    reg_t reg = prsrv_regs[i];
+
+    // Name it something easy to debug and add space to avoid collision
+    char *var_name = calloc(5, sizeof(char));
+    snprintf(var_name, 5, " %s", reg_names[reg]);
+
+    // Size is by default 8 since INT is the only type
+    const scope_var_t *var = scope_insert(scope, var_name, 8);
+    if (var == NULL) {
+      errx(EXIT_FAILURE, "error: variable already named '%s'... somehow??",
+           var_name);
+    }
+    mov_reg_to_mem_offset(reg, RBP, var->position);
+    stack_size += var->size;
+  }
   // Init parameters
   for (int i = 0; i < MAX_FUNC_ARGS; ++i) {
     if (func->args[i] == NULL)
@@ -550,7 +574,31 @@ void write_func(function_t *func) {
   sub_imm32(RSP, (int32_t)stack_size);
 
   // Write code block
-  write_codeblock(func->code_block, scope);
+  jmptab_t *jmptab = jmptab_init();
+  write_codeblock(func->code_block, scope, jmptab);
+
+  size_t ret_block = text_get_pos();
+
+  // Restore preserved registers
+  for (unsigned int i = 0; i < sizeof(prsrv_regs) / sizeof(reg_t); ++i) {
+    reg_t reg = prsrv_regs[i];
+
+    // Leave this
+    char var_name[5] = {0};
+    snprintf(var_name, sizeof(var_name), " %s", reg_names[reg]);
+
+    // Size is by default 8 since INT is the only type
+    const scope_var_t *var = scope_get(scope, var_name);
+    if (var == NULL) {
+      errx(EXIT_FAILURE, "error: no variable named '%s'...", reg_names[reg]);
+    }
+    mov_mem_offset_to_reg(reg, RBP, var->position);
+  }
+  mov_reg_to_reg(RSP, RBP);
+  pop(RBP);
+  ret();
+
+  jmptab_eval(jmptab, LABEL_RET, ret_block);
 
   // Add to strtab
   append_strtab(func->name);
