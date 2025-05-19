@@ -6,11 +6,15 @@ extern int64_t dumlang(int64_t a);
 int64_t dumlang_test(int64_t param) {
   int64_t i = 0;
   while (param > 3 && i <= 10) {
-    if (param == 5) {
-      return 69;
-    }
     param = param - 1;
     i = i + 1;
+    if (param == 5) {
+      param = param - 1;
+      continue;
+    }
+    if (param != 5) {
+      break;
+    }
   }
   return i;
 }

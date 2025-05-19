@@ -459,19 +459,24 @@ void write_while_statement(while_statement_t *stmt, scope_t *scope,
   size_t blockpos = text_get_pos();
   write_codeblock(stmt->code_block, scope, tab);
 
-  // Need to know how long jump instruction is before knowing relative jump
-  // distance
-  size_t jpos = text_get_pos();
-  write_jmp(J_REL32, 0);
-  size_t afterjpos = text_get_pos();
-  text_set_pos(jpos);
-  write_jmp(J_REL32, (int32_t)(loop_top_pos - afterjpos));
-  text_set_pos(afterjpos);
+  jmptab_insert(tab, text_len, LABEL_LOOP_START, J_REL32);
+  write_jmp(J_REL32, LABEL_LOOP_START);
 
+  jmptab_eval(tab, LABEL_LOOP_START, loop_top_pos);
   jmptab_eval(tab, LABEL_BLOCK_START, blockpos);
   jmptab_eval(tab, LABEL_BLOCK_END, text_get_pos());
   jmptab_merge(superjmptab, tab);
   jmptab_free(tab);
+}
+
+void write_cont_statement(jmptab_t *tab) {
+  jmptab_insert(tab, text_len, LABEL_LOOP_START, J_REL32);
+  write_jmp(J_REL32, LABEL_LOOP_START);
+}
+
+void write_break_statement(jmptab_t *tab) {
+  jmptab_insert(tab, text_len, LABEL_BLOCK_END, J_REL32);
+  write_jmp(J_REL32, LABEL_BLOCK_END);
 }
 
 void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
@@ -492,6 +497,12 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
     break;
   case STMT_WHILE:
     write_while_statement(stmt->instance.while_loop, scope, jmptab);
+    break;
+  case STMT_CONT:
+    write_cont_statement(jmptab);
+    break;
+  case STMT_BREAK:
+    write_break_statement(jmptab);
     break;
   }
 }

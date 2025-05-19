@@ -8,6 +8,7 @@
 typedef enum _jmp_target_t {
   LABEL_BLOCK_START,
   LABEL_BLOCK_END,
+  LABEL_LOOP_START,
   LABEL_RET,
   LABEL_NEXT_COND,
 } jmp_target_t;

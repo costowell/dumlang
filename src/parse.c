@@ -300,18 +300,18 @@ expression_t *try_parse_expr_atom() {
     expr->instance.expr = subexpr;
   } else if (try_parse_token(TOKEN_LOG_NEG) &&
              try_parse_token(TOKEN_PAREN_LEFT)) {
-      expression_t *subexpr;
-      if ((subexpr = try_parse_expression()) == NULL)
-        goto fail;
-      ASSERT_TOKEN(TOKEN_PAREN_RIGHT);
+    expression_t *subexpr;
+    if ((subexpr = try_parse_expression()) == NULL)
+      goto fail;
+    ASSERT_TOKEN(TOKEN_PAREN_RIGHT);
 
-      bool_operation_t *op = malloc(sizeof(bool_operation_t));
-      op->op = BOOL_OP_NOT;
-      op->lhs = subexpr;
-      op->rhs = NULL;
+    bool_operation_t *op = malloc(sizeof(bool_operation_t));
+    op->op = BOOL_OP_NOT;
+    op->lhs = subexpr;
+    op->rhs = NULL;
 
-      expr->type = EXPR_BOOL;
-      expr->instance.bop = op;
+    expr->type = EXPR_BOOL;
+    expr->instance.bop = op;
   } else {
     goto fail;
   }
@@ -474,6 +474,10 @@ statement_t *try_parse_statement() {
     stmt->type = STMT_COND;
   } else if ((stmt->instance.while_loop = try_parse_while_loop()) != NULL) {
     stmt->type = STMT_WHILE;
+  } else if (try_parse_token(TOKEN_KW_CONT)) {
+    stmt->type = STMT_CONT;
+  } else if (try_parse_token(TOKEN_KW_BREAK)) {
+    stmt->type = STMT_BREAK;
   } else {
     return NULL;
   }
