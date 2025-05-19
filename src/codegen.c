@@ -1,5 +1,4 @@
 #include "codegen.h"
-#include "hashmap.h"
 #include "instr.h"
 #include "jmp.h"
 #include "obj.h"
@@ -78,6 +77,14 @@ reg_t next_reg() {
   }
 
   errx(EXIT_FAILURE, "not enough registers available!");
+}
+
+void reset_regtab() {
+  memset(regtab, 0, sizeof(regtab));
+  regtab[RSP] = true;
+  regtab[RBP] = true;
+  regtab[RAX] = true;
+  regtab[RDX] = true;
 }
 
 void emit() {
@@ -395,6 +402,7 @@ void evaluate_expression_to_cond(expression_t *expr, jmp_target_t cond_true,
                                  jmp_target_t cond_false, jmptab_t *tab,
                                  scope_t *scope) {
   _evaluate_expression_to_cond(expr, cond_true, cond_false, 1, tab, scope);
+  reset_regtab();
 }
 
 void evaluate_expression_to_arith(expression_t *expr, reg_t result,
@@ -404,6 +412,7 @@ void evaluate_expression_to_arith(expression_t *expr, reg_t result,
   } else {
     printf("%d\n", expr->type);
   }
+  reset_regtab();
 }
 
 void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
@@ -418,6 +427,7 @@ void write_declare_statement(declare_statement_t *stmt, scope_t *scope,
 
   evaluate_expression_to_arith(stmt->expr, RAX, scope);
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
+  reset_regtab();
 }
 
 void write_ret_statement(ret_statement_t *stmt, scope_t *scope,
@@ -425,6 +435,7 @@ void write_ret_statement(ret_statement_t *stmt, scope_t *scope,
   evaluate_expression_to_arith(stmt->expr, RAX, scope);
   jmptab_insert(jmptab, text_get_pos(), LABEL_RET, J_REL32);
   write_jmp(J_REL32, LABEL_RET);
+  reset_regtab();
 }
 
 void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
@@ -434,6 +445,7 @@ void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
 
   evaluate_expression_to_arith(stmt->expr, RAX, scope);
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
+  reset_regtab();
 }
 
 void write_cond_statement(cond_statement_t *stmt, scope_t *scope,
