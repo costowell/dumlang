@@ -625,6 +625,9 @@ void write_func(function_t *func) {
 
   jmptab_eval(jmptab, LABEL_RET, ret_block);
 
+  if (jmptab->first != NULL)
+    errx(EXIT_FAILURE, "non-empty jump table, check for invalid breaks and continues");
+
   // Add to strtab
   append_strtab(func->name);
   sym.st_size = text_len;
