@@ -8,7 +8,8 @@ scope_t *scope_init() {
   return scope;
 }
 
-const scope_var_t *scope_insert(scope_t *scope, char *str, uint8_t size) {
+const scope_var_t *scope_insert_immutable(scope_t *scope, char *str,
+                                          uint8_t size, bool immutable) {
   const scope_var_t *elm =
       hashmap_get(&scope->map, str, (unsigned int)strlen(str));
   if (elm != NULL) {
@@ -17,11 +18,16 @@ const scope_var_t *scope_insert(scope_t *scope, char *str, uint8_t size) {
   scope_var_t *scope_var = malloc(sizeof(scope_var_t));
   scope_var->size = size;
   scope_var->position = (int32_t)(-scope->stacksize);
+  scope_var->immutable = immutable;
 
   scope->stacksize += size;
   hashmap_put(&scope->map, str, (unsigned int)strlen(str), scope_var);
 
   return scope_var;
+}
+
+const scope_var_t *scope_insert(scope_t *scope, char *str, uint8_t size) {
+  return scope_insert_immutable(scope, str, size, false);
 }
 
 bool scope_remove(scope_t *scope, char *str) {

@@ -442,6 +442,8 @@ void write_assign_statement(assign_statement_t *stmt, scope_t *scope) {
   const scope_var_t *scope_var;
   if ((scope_var = scope_get(scope, stmt->lhs)) == NULL)
     errx(EXIT_FAILURE, "error: no variable '%s'", stmt->lhs);
+  if (scope_var->immutable)
+    errx(EXIT_FAILURE, "error: '%s' is immutable", stmt->lhs);
 
   evaluate_expression_to_arith(stmt->expr, RAX, scope);
   mov_reg_to_mem_offset(RAX, RBP, scope_var->position);
@@ -585,7 +587,7 @@ void write_func(function_t *func) {
       break;
     char *arg_name = func->args[i]->name;
     // Size is by default 8 since INT is the only type
-    const scope_var_t *var = scope_insert(scope, arg_name, 8);
+    const scope_var_t *var = scope_insert_immutable(scope, arg_name, 8, true);
     if (var == NULL) {
       errx(EXIT_FAILURE, "error: argument already named '%s'", arg_name);
     }
