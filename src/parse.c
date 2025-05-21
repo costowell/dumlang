@@ -478,6 +478,8 @@ statement_t *try_parse_statement() {
     stmt->type = STMT_CONT;
   } else if (try_parse_token(TOKEN_KW_BREAK)) {
     stmt->type = STMT_BREAK;
+  } else if ((stmt->instance.expr = try_parse_expression()) != NULL) {
+    stmt->type = STMT_EXPR;
   } else {
     return NULL;
   }

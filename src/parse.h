@@ -111,7 +111,8 @@ typedef enum _statement_type {
   STMT_COND,
   STMT_WHILE,
   STMT_CONT,
-  STMT_BREAK
+  STMT_BREAK,
+  STMT_EXPR,
 } statement_type_t;
 
 typedef struct _while_statement {
