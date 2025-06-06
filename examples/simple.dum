@@ -1,11 +1,16 @@
+@test() {
+  ret 1
+}
+
 @dumlang(param: int) {
-  dec i: int = 10
-  while 1 {
-    if param == 2 {
-      i = i * 2
-      i = i + 1
+  dec a: int = 1
+  dec b: int = param
+  while (b > 0) {
+    a = a * 2
+    if a == 16 {
+      continue
     }
-    break
+    b = b - 1
   }
-  ret i
+  ret a
 }

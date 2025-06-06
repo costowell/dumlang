@@ -518,6 +518,9 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
   case STMT_BREAK:
     write_break_statement(jmptab);
     break;
+  case STMT_EXPR:
+    evaluate_expression_to_arith(stmt->instance.expr, RAX, scope);
+    break;
   }
 }
 
@@ -626,7 +629,8 @@ void write_func(function_t *func) {
   jmptab_eval(jmptab, LABEL_RET, ret_block);
 
   if (jmptab->first != NULL)
-    errx(EXIT_FAILURE, "non-empty jump table, check for invalid breaks and continues");
+    errx(EXIT_FAILURE,
+         "non-empty jump table, check for invalid breaks and continues");
 
   // Add to strtab
   append_strtab(func->name);
