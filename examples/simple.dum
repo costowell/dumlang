@@ -8,7 +8,7 @@
   while (b > 0) {
     a = a * 2
     if a == 16 {
-      continue
+      cont
     }
     b = b - 1
   }

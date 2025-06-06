@@ -521,6 +521,8 @@ void write_statement(statement_t *stmt, scope_t *scope, char **added_vars,
   case STMT_EXPR:
     evaluate_expression_to_arith(stmt->instance.expr, RAX, scope);
     break;
+  default:
+    errx(EXIT_FAILURE, "unknown statement type in codegen");
   }
 }
 
